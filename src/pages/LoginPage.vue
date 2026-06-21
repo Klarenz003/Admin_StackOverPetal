@@ -32,10 +32,10 @@ async function login() {
         <p>Admin Dashboard</p>
       </div>
 
-      <label>Username</label>
+      <label>Email</label>
       <input
         v-model="username"
-        type="text"
+        type="email"
         placeholder="admin"
         @keyup.enter="login"
       />
