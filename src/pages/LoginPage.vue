@@ -36,7 +36,7 @@ async function login() {
       <input
         v-model="username"
         type="email"
-        placeholder="admin"
+        placeholder="your@email.com"
         @keyup.enter="login"
       />
 
