@@ -12,12 +12,12 @@ const username   = ref('')
 const password   = ref('')
 const loginError = ref('')
 
-function login() {
-  const err = auth.login(username.value, password.value)
+async function login() {
+  const err = await auth.login(username.value, password.value)
   if (err) {
     loginError.value = err
   } else {
-    admin.loadData()
+    await admin.loadData()
     admin.startAutoRefresh()
     router.push('/overview')
   }

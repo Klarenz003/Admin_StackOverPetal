@@ -1,24 +1,20 @@
 // src/stores/auth.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { supabase } from '@/supabaseClient'
 
 export const useAuthStore = defineStore('auth', () => {
-  // TODO: Replace with Supabase Auth
-  // import { supabase } from '@/lib/supabase'
-  // const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
   const loggedIn = ref(false)
 
-  function login(username: string, password: string): string {
-    // Temporary hardcoded check — swap for Supabase Auth when ready
-    if (username === 'admin' && password === 'admin') {
-      loggedIn.value = true
-      return ''
-    }
-    return 'Incorrect username or password.'
+  async function login(email: string, password: string): Promise<string> {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return error.message
+    loggedIn.value = true
+    return ''
   }
 
-  function logout() {
+  async function logout() {
+    await supabase.auth.signOut()
     loggedIn.value = false
   }
 

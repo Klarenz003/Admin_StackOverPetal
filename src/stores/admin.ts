@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Order, Message, AdminTab } from '@/types'
+import { supabase } from '@/supabaseClient'
 
 export const useAdminStore = defineStore('admin', () => {
 
@@ -102,25 +103,75 @@ export const useAdminStore = defineStore('admin', () => {
   )
 
   // ── Actions ────────────────────────────────────────────────────
-  function loadData() {
-    // TODO: Replace with Supabase / API calls
-    // orders.value   = await api.get('/orders')
-    // messages.value = await api.get('/messages')
-    orders.value   = JSON.parse(localStorage.getItem('sp_orders')   || '[]')
-    messages.value = JSON.parse(localStorage.getItem('sp_messages') || '[]')
-    lastRefresh.value = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    async function loadData() {
+    const [{ data: ordersData }, { data: msgsData }] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false }),
+    ])
+
+    orders.value = (ordersData || []).map(o => ({
+      id:             o.id,
+      createdAt:      o.created_at,
+      customer: {
+        name:    o.customer_name,
+        email:   o.email,
+        phone:   o.phone,
+        address: o.address,
+        date:    o.delivery_date,
+        note:    o.note,
+      },
+      items:          o.items,
+      total:          o.total,
+      paymentMethod:  o.payment_method,
+      proofImage:     o.proof_url
+        ? supabase.storage.from('proofs').getPublicUrl(o.proof_url).data.publicUrl
+        : '',
+      paymentStatus:  capitalize(o.status) as any,
+      deliveryStatus: 'Processing' as any,
+    }))
+
+    messages.value = (msgsData || []).map(m => ({
+      id:        m.id,
+      createdAt: m.created_at,
+      name:      m.name,
+      email:     m.email,
+      subject:   m.subject,
+      message:   m.message,
+      read:      m.read,
+    }))
+
+    lastRefresh.value = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit',
+    })
   }
 
-  function saveOrders() {
-    localStorage.setItem('sp_orders', JSON.stringify(orders.value))
+  async function saveOrders() {
+    if (!activeOrder.value) return
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: activeOrder.value.paymentStatus.toLowerCase() })
+      .eq('id', activeOrder.value.id)
+
+    if (error) { showToast('Failed to update order.'); return }
   }
 
-  function saveMessages() {
-    localStorage.setItem('sp_messages', JSON.stringify(messages.value))
+
+  async function saveMessages() {
+    if (!activeMessage.value) return
+    await supabase
+      .from('messages')
+      .update({ read: activeMessage.value.read })
+      .eq('id', activeMessage.value.id)
   }
 
-  function saveFromModal() {
-    saveOrders()
+  async function saveFromModal() {
+    await saveOrders()
     showToast('Order updated successfully!')
     activeOrder.value = null
   }
@@ -195,6 +246,11 @@ export const useAdminStore = defineStore('admin', () => {
   function stopAutoRefresh() {
     clearInterval(_refreshInterval)
   }
+
+  // ── Helpers ────────────────────────────────────────────────────
+    function capitalize(s: string) {
+      return s.charAt(0).toUpperCase() + s.slice(1)
+    }
 
   return {
     // state
