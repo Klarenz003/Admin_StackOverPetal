@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stack Petals — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:#f4f1ee; color:#222; min-height:100vh; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:8px; }
+    ::-webkit-scrollbar-track { background:#f0ebe8; }
+    ::-webkit-scrollbar-thumb { background:#c48b8d; border-radius:8px; }
+
+    /* ── Login Screen ── */
+    .login-screen {
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#fdf0ef 0%,#e8f0ec 100%);
+    }
+    .login-card {
+      background:#fff; border-radius:24px; padding:48px 40px; width:100%; max-width:400px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.1);
+    }
+    .login-card .brand { text-align:center; margin-bottom:32px; }
+    .login-card .brand h1 { font-family:'Cormorant Garamond',serif; font-size:32px; }
+    .login-card .brand p  { color:#888; font-size:14px; margin-top:4px; }
+    .login-card label { display:block; font-size:13px; font-weight:500; color:#555; margin-bottom:6px; margin-top:18px; }
+    .login-card input {
+      width:100%; padding:12px 16px; border:1.5px solid #e0dada; border-radius:10px;
+      font-size:15px; outline:none; transition:border-color .2s;
+    }
+    .login-card input:focus { border-color:#5f8872; }
+    .login-btn {
+      width:100%; margin-top:28px; padding:14px; background:#5f8872; color:#fff;
+      border:none; border-radius:12px; font-size:16px; cursor:pointer; font-weight:500;
+      transition:background .2s;
+    }
+    .login-btn:hover { background:#4a6b5a; }
+    .login-error { color:#c0392b; font-size:13px; margin-top:10px; text-align:center; }
+    .login-hint { color:#aaa; font-size:12px; margin-top:14px; text-align:center; }
+
+    /* ── Layout ── */
+    .admin-layout { display:flex; min-height:100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width:240px; background:#fff; border-right:1px solid #ede8e5; padding:28px 0;
+      display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100;
+    }
+    .sidebar-brand { padding:0 24px 24px; border-bottom:1px solid #ede8e5; }
+    .sidebar-brand h2 { font-family:'Cormorant Garamond',serif; font-size:22px; }
+    .sidebar-brand p  { font-size:11px; color:#999; margin-top:2px; }
+    .sidebar-nav { padding:16px 12px; flex:1; display:flex; flex-direction:column; gap:4px; }
+    .nav-item {
+      display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px;
+      cursor:pointer; font-size:14px; color:#555; transition:background .15s, color .15s;
+      position:relative;
+    }
+    .nav-item:hover   { background:#f5f0ee; color:#222; }
+    .nav-item.active  { background:#5f8872; color:#fff; }
+    .nav-item .icon   { font-size:18px; width:20px; text-align:center; }
+    .nav-badge {
+      margin-left:auto; background:#d8a5a7; color:#fff; border-radius:20px;
+      font-size:11px; padding:2px 7px; font-weight:600;
+    }
+    .nav-item.active .nav-badge { background:rgba(255,255,255,0.3); }
+    .sidebar-footer { padding:16px 24px; border-top:1px solid #ede8e5; }
+    .logout-btn {
+      width:100%; padding:10px; border:1px solid #e0dada; background:#fff; border-radius:10px;
+      font-size:13px; cursor:pointer; color:#888; transition:all .2s;
+    }
+    .logout-btn:hover { background:#fdf0ef; border-color:#d8a5a7; color:#c0392b; }
+
+    /* ── Main ── */
+    .main { margin-left:240px; padding:32px; flex:1; }
+
+    /* ── Top Bar ── */
+    .topbar {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:28px;
+    }
+    .topbar h1 { font-family:'Cormorant Garamond',serif; font-size:32px; }
+    .topbar-actions { display:flex; gap:12px; align-items:center; }
+    .refresh-btn {
+      padding:9px 18px; background:#fff; border:1px solid #ddd; border-radius:10px;
+      font-size:13px; cursor:pointer; color:#555; transition:all .2s;
+    }
+    .refresh-btn:hover { border-color:#5f8872; color:#5f8872; }
+    .last-refresh { font-size:12px; color:#aaa; }
+
+    /* ── Stat Cards ── */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+    .stat-card {
+      background:#fff; border-radius:16px; padding:22px 24px; border:1px solid #ede8e5;
+    }
+    .stat-card .label { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:.05em; }
+    .stat-card .value { font-size:30px; font-weight:600; margin-top:6px; }
+    .stat-card .sub   { font-size:12px; color:#aaa; margin-top:4px; }
+    .stat-card.green .value { color:#5f8872; }
+    .stat-card.pink  .value { color:#c48b8d; }
+    .stat-card.gold  .value { color:#b8860b; }
+    .stat-card.blue  .value { color:#3a7ca5; }
+
+    /* ── Section Card ── */
+    .section-card {
+      background:#fff; border-radius:16px; border:1px solid #ede8e5; overflow:hidden; margin-bottom:24px;
+    }
+    .section-header {
+      padding:18px 24px; border-bottom:1px solid #ede8e5; display:flex;
+      justify-content:space-between; align-items:center;
+    }
+    .section-header h3 { font-size:16px; font-weight:600; }
+    .section-header small { font-size:12px; color:#aaa; }
+
+    /* ── Filter/Search Bar ── */
+    .filter-row {
+      padding:14px 24px; border-bottom:1px solid #f0ebe8; display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .search-input {
+      flex:1; min-width:180px; padding:9px 14px; border:1px solid #e0dada; border-radius:8px;
+      font-size:13px; outline:none;
+    }
+    .search-input:focus { border-color:#5f8872; }
+    .filter-select {
+      padding:9px 14px; border:1px solid #e0dada; border-radius:8px; font-size:13px; outline:none; background:#fff;
+    }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:11px 20px; background:#faf8f7; color:#888; font-weight:500; font-size:12px; border-bottom:1px solid #ede8e5; }
+    td { padding:13px 20px; border-bottom:1px solid #f5f1ef; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fdf9f8; }
+
+    /* ── Badges ── */
+    .badge {
+      display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
+    }
+    .badge-pending   { background:#fff3cd; color:#856404; }
+    .badge-verified  { background:#d1e7dd; color:#0f5132; }
+    .badge-rejected  { background:#f8d7da; color:#842029; }
+    .badge-processing{ background:#cfe2ff; color:#084298; }
+    .badge-packed    { background:#e2d9f3; color:#432874; }
+    .badge-shipped   { background:#fff3cd; color:#856404; }
+    .badge-delivered { background:#d1e7dd; color:#0f5132; }
+    .badge-cancelled { background:#f8d7da; color:#842029; }
+    .badge-unread    { background:#fde8e8; color:#c0392b; }
+    .badge-read      { background:#e8f5e9; color:#2e7d32; }
+
+    /* ── Action Selects ── */
+    .status-select {
+      padding:5px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px;
+      background:#fff; cursor:pointer; outline:none;
+    }
+    .status-select:focus { border-color:#5f8872; }
+
+    /* ── Proof Thumb ── */
+    .proof-thumb {
+      width:44px; height:44px; border-radius:8px; object-fit:cover; cursor:pointer;
+      border:1px solid #ddd; transition:transform .15s;
+    }
+    .proof-thumb:hover { transform:scale(1.08); }
+
+    /* ── Proof Lightbox ── */
+    .lightbox-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:5000;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .lightbox-overlay img {
+      max-width:90vw; max-height:90vh; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.5);
+    }
+    .lightbox-close {
+      position:absolute; top:20px; right:30px; background:none; border:none; color:#fff;
+      font-size:36px; cursor:pointer;
+    }
+
+    /* ── Order Detail Modal ── */
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:4000;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .modal-box {
+      background:#fff; border-radius:20px; padding:36px; width:100%; max-width:560px;
+      max-height:90vh; overflow-y:auto; position:relative;
+    }
+    .modal-box h2 { font-family:'Cormorant Garamond',serif; font-size:26px; margin-bottom:20px; }
+    .modal-close { position:absolute; top:18px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#888; }
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+    .detail-item label { font-size:11px; color:#888; display:block; margin-bottom:3px; }
+    .detail-item p { font-size:14px; font-weight:500; }
+    .detail-item.full { grid-column:1/-1; }
+    .order-items-list { border:1px solid #ede8e5; border-radius:12px; overflow:hidden; margin-bottom:20px; }
+    .order-item-row { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f0ebe8; }
+    .order-item-row:last-child { border-bottom:none; }
+    .order-item-row img { width:44px; height:44px; border-radius:8px; object-fit:cover; }
+    .order-item-row .name { flex:1; font-size:13px; font-weight:500; }
+    .order-item-row .price { font-size:13px; color:#5f8872; }
+    .proof-full { width:100%; border-radius:12px; margin-bottom:20px; border:1px solid #ede8e5; }
+    .status-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+    .status-row label { font-size:12px; color:#888; display:block; margin-bottom:4px; }
+    .save-btn {
+      width:100%; padding:13px; background:#5f8872; color:#fff; border:none; border-radius:12px;
+      font-size:15px; cursor:pointer; font-weight:500; transition:background .2s;
+    }
+    .save-btn:hover { background:#4a6b5a; }
+
+    /* ── Message Detail Modal ── */
+    .msg-body { background:#f9f5f4; border-radius:12px; padding:18px; font-size:14px; line-height:1.7; color:#333; }
+
+    /* ── Reply ── */
+    .reply-box { margin-top:16px; }
+    .reply-box textarea {
+      width:100%; padding:12px 14px; border:1.5px solid #e0dada; border-radius:10px;
+      font-size:14px; resize:vertical; outline:none; font-family:inherit;
+    }
+    .reply-box textarea:focus { border-color:#5f8872; }
+    .reply-send-btn {
+      margin-top:8px; padding:10px 24px; background:#5f8872; color:#fff;
+      border:none; border-radius:10px; font-size:14px; cursor:pointer;
+    }
+    .reply-send-btn:hover { background:#4a6b5a; }
+    .reply-sent { color:#5f8872; font-size:13px; margin-top:8px; }
+
+    /* ── Empty State ── */
+    .empty-state { padding:60px; text-align:center; color:#bbb; }
+    .empty-state .emoji { font-size:40px; margin-bottom:12px; }
+    .empty-state p { font-size:14px; }
+
+    /* ── Toast ── */
+    .toast {
+      position:fixed; bottom:30px; right:30px; background:#222; color:#fff;
+      padding:12px 22px; border-radius:12px; font-size:14px; z-index:9999;
+      animation:slideUp .3s ease;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Responsive ── */
+    @media(max-width:900px) {
+      .sidebar { width:200px; }
+      .main { margin-left:200px; padding:20px; }
+      .stats-row { grid-template-columns:repeat(2,1fr); }
+    }
+    @media(max-width:640px) {
+      .admin-layout { flex-direction:column; }
+      .sidebar { position:static; width:100%; flex-direction:row; flex-wrap:wrap; height:auto; }
+      .main { margin-left:0; }
+      .stats-row { grid-template-columns:1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="admin">
+
+  <!-- ── Login ── -->
+  <div class="login-screen" v-if="!loggedIn">
+    <div class="login-card">
+      <div class="brand">
+        <h1>🌸 Stack Petals</h1>
+        <p>Admin Dashboard</p>
+      </div>
+      <label>Username</label>
+      <input v-model="loginForm.user" type="text" placeholder="admin" @keyup.enter="login">
+      <label>Password</label>
+      <input v-model="loginForm.pass" type="password" placeholder="••••••••" @keyup.enter="login">
+      <button class="login-btn" @click="login">Sign In</button>
+      <p class="login-error" v-if="loginError">{{ loginError }}</p>
+      <p class="login-hint">@2026 Stack Petals</p>
+    </div>
+  </div>
+
+  <!-- ── Dashboard ── -->
+  <div class="admin-layout" v-else>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h2>🌸 Stack Petals</h2>
+        <p>Admin Panel</p>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item" :class="{active: tab==='overview'}" @click="tab='overview'">
+          <span class="icon">📊</span> Overview
+        </div>
+        <div class="nav-item" :class="{active: tab==='orders'}" @click="tab='orders'">
+          <span class="icon">📦</span> Orders
+          <span class="nav-badge" v-if="pendingOrders > 0">{{ pendingOrders }}</span>
+        </div>
+        <div class="nav-item" :class="{active: tab==='messages'}" @click="tab='messages'">
+          <span class="icon">💬</span> Messages
+          <span class="nav-badge" v-if="unreadMessages > 0">{{ unreadMessages }}</span>
+        </div>
+        <div class="nav-item" :class="{active: tab==='transactions'}" @click="tab='transactions'">
+          <span class="icon">💳</span> Transactions
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" @click="logout">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Top Bar -->
+      <div class="topbar">
+        <h1>{{ tabLabel }}</h1>
+        <div class="topbar-actions">
+          <span class="last-refresh">Updated {{ lastRefresh }}</span>
+          <button class="refresh-btn" @click="loadData">⟳ Refresh</button>
+        </div>
+      </div>
+
+      <!-- ────────────────── OVERVIEW ────────────────── -->
+      <div v-if="tab==='overview'">
+        <div class="stats-row">
+          <div class="stat-card green">
+            <div class="label">Total Orders</div>
+            <div class="value">{{ orders.length }}</div>
+            <div class="sub">all time</div>
+          </div>
+          <div class="stat-card pink">
+            <div class="label">Revenue</div>
+            <div class="value">${{ totalRevenue }}</div>
+            <div class="sub">verified payments</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="label">Pending Payment</div>
+            <div class="value">{{ pendingOrders }}</div>
+            <div class="sub">awaiting verification</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="label">Messages</div>
+            <div class="value">{{ messages.length }}</div>
+            <div class="sub">{{ unreadMessages }} unread</div>
+          </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Recent Orders</h3>
+            <small>Last 5</small>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th><th>Customer</th><th>Total</th>
+                  <th>Payment</th><th>Delivery</th><th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="o in orders.slice(0,5)" :key="o.id" style="cursor:pointer" @click="openOrder(o)">
+                  <td><code style="font-size:11px;color:#888">{{ o.id }}</code></td>
+                  <td><strong>{{ o.customer.name }}</strong></td>
+                  <td>{{ o.total }}</td>
+                  <td><span :class="paymentBadge(o.paymentStatus)">{{ o.paymentStatus }}</span></td>
+                  <td><span :class="deliveryBadge(o.deliveryStatus)">{{ o.deliveryStatus }}</span></td>
+                  <td>{{ formatDate(o.createdAt) }}</td>
+                </tr>
+                <tr v-if="orders.length===0">
+                  <td colspan="6" style="text-align:center;color:#bbb;padding:40px">No orders yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Messages -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Recent Messages</h3>
+            <small>Last 5</small>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Subject</th><th>Status</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in messages.slice(0,5)" :key="m.id" style="cursor:pointer" @click="openMessage(m)">
+                  <td><strong>{{ m.name }}</strong></td>
+                  <td>{{ m.email }}</td>
+                  <td>{{ m.subject || '(no subject)' }}</td>
+                  <td><span :class="m.read ? 'badge badge-read' : 'badge badge-unread'">{{ m.read ? 'Read' : 'Unread' }}</span></td>
+                  <td>{{ formatDate(m.createdAt) }}</td>
+                </tr>
+                <tr v-if="messages.length===0">
+                  <td colspan="5" style="text-align:center;color:#bbb;padding:40px">No messages yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────── ORDERS ────────────────── -->
+      <div v-if="tab==='orders'">
+        <div class="section-card">
+          <div class="filter-row">
+            <input class="search-input" v-model="orderSearch" placeholder="Search by name, ID, email…">
+            <select class="filter-select" v-model="orderPayFilter">
+              <option value="">All Payment Status</option>
+              <option>Pending</option><option>Verified</option><option>Rejected</option>
+            </select>
+            <select class="filter-select" v-model="orderDelFilter">
+              <option value="">All Delivery Status</option>
+              <option>Processing</option><option>Packed</option>
+              <option>Shipped</option><option>Delivered</option><option>Cancelled</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th>
+                  <th>Via</th><th>Proof</th><th>Payment</th><th>Delivery</th><th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="o in filteredOrders" :key="o.id">
+                  <td style="cursor:pointer;color:#5f8872;font-weight:500" @click="openOrder(o)">
+                    <code style="font-size:11px">{{ o.id }}</code>
+                  </td>
+                  <td>
+                    <div style="font-weight:500">{{ o.customer.name }}</div>
+                    <div style="font-size:11px;color:#aaa">{{ o.customer.email }}</div>
+                  </td>
+                  <td style="font-size:12px;color:#666">
+                    {{ o.items.map(i=>i.name).join(', ') }}
+                  </td>
+                  <td style="font-weight:600;color:#5f8872">{{ o.total }}</td>
+                  <td>{{ o.paymentMethod }}</td>
+                  <td>
+                    <img v-if="o.proofImage" :src="o.proofImage" class="proof-thumb" @click="viewProof(o.proofImage)" alt="Proof">
+                    <span v-else style="color:#ccc;font-size:12px">—</span>
+                  </td>
+                  <td>
+                    <select class="status-select" v-model="o.paymentStatus" @change="saveOrders(); showToast('Payment status updated')">
+                      <option>Pending</option><option>Verified</option><option>Rejected</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select class="status-select" v-model="o.deliveryStatus" @change="saveOrders(); showToast('Delivery status updated')">
+                      <option>Processing</option><option>Packed</option>
+                      <option>Shipped</option><option>Delivered</option><option>Cancelled</option>
+                    </select>
+                  </td>
+                  <td style="font-size:12px;color:#888">{{ formatDate(o.createdAt) }}</td>
+                </tr>
+                <tr v-if="filteredOrders.length===0">
+                  <td colspan="9">
+                    <div class="empty-state"><div class="emoji">📦</div><p>No orders found.</p></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────── MESSAGES ────────────────── -->
+      <div v-if="tab==='messages'">
+        <div class="section-card">
+          <div class="filter-row">
+            <input class="search-input" v-model="msgSearch" placeholder="Search by name, email, subject…">
+            <select class="filter-select" v-model="msgReadFilter">
+              <option value="">All</option><option value="unread">Unread</option><option value="read">Read</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Subject</th><th>Preview</th><th>Status</th><th>Date</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in filteredMessages" :key="m.id" style="cursor:pointer" @click="openMessage(m)">
+                  <td><strong>{{ m.name }}</strong></td>
+                  <td>{{ m.email }}</td>
+                  <td>{{ m.subject || '(no subject)' }}</td>
+                  <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#888">
+                    {{ m.message }}
+                  </td>
+                  <td><span :class="m.read ? 'badge badge-read' : 'badge badge-unread'">{{ m.read ? 'Read' : 'Unread' }}</span></td>
+                  <td style="font-size:12px;color:#888">{{ formatDate(m.createdAt) }}</td>
+                  <td @click.stop>
+                    <button
+                      style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer"
+                      @click="toggleRead(m)">
+                      {{ m.read ? 'Mark Unread' : 'Mark Read' }}
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="filteredMessages.length===0">
+                  <td colspan="7">
+                    <div class="empty-state"><div class="emoji">💬</div><p>No messages found.</p></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────── TRANSACTIONS ────────────────── -->
+      <div v-if="tab==='transactions'">
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card green">
+            <div class="label">Total Revenue</div>
+            <div class="value">${{ totalRevenue }}</div>
+            <div class="sub">from verified orders</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="label">Pending</div>
+            <div class="value">{{ pendingOrders }}</div>
+            <div class="sub">awaiting verification</div>
+          </div>
+          <div class="stat-card pink">
+            <div class="label">Avg Order Value</div>
+            <div class="value">${{ avgOrder }}</div>
+            <div class="sub">across all orders</div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <h3>All Transactions</h3>
+            <small>{{ orders.length }} total</small>
+          </div>
+          <div class="filter-row">
+            <input class="search-input" v-model="txSearch" placeholder="Search by name or order ID…">
+            <select class="filter-select" v-model="txPayFilter">
+              <option value="">All Status</option>
+              <option>Pending</option><option>Verified</option><option>Rejected</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th><th>Customer</th><th>Total</th>
+                  <th>Method</th><th>Payment Status</th><th>Date</th><th>Proof</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="o in filteredTx" :key="o.id">
+                  <td><code style="font-size:11px;color:#888">{{ o.id }}</code></td>
+                  <td>
+                    <div style="font-weight:500">{{ o.customer.name }}</div>
+                    <div style="font-size:11px;color:#aaa">{{ o.customer.email }}</div>
+                  </td>
+                  <td style="font-weight:600;color:#5f8872">{{ o.total }}</td>
+                  <td>{{ o.paymentMethod }}</td>
+                  <td>
+                    <select class="status-select" v-model="o.paymentStatus" @change="saveOrders(); showToast('Payment status updated')">
+                      <option>Pending</option><option>Verified</option><option>Rejected</option>
+                    </select>
+                  </td>
+                  <td style="font-size:12px;color:#888">{{ formatDate(o.createdAt) }}</td>
+                  <td>
+                    <img v-if="o.proofImage" :src="o.proofImage" class="proof-thumb" @click="viewProof(o.proofImage)" alt="Proof">
+                    <span v-else style="color:#ccc;font-size:12px">—</span>
+                  </td>
+                </tr>
+                <tr v-if="filteredTx.length===0">
+                  <td colspan="7">
+                    <div class="empty-state"><div class="emoji">💳</div><p>No transactions found.</p></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Proof Lightbox ── -->
+  <div class="lightbox-overlay" v-if="lightboxSrc" @click="lightboxSrc=null">
+    <button class="lightbox-close" @click="lightboxSrc=null">✕</button>
+    <img :src="lightboxSrc" alt="Payment Proof">
+  </div>
+
+  <!-- ── Order Detail Modal ── -->
+  <div class="modal-overlay" v-if="activeOrder" @click.self="activeOrder=null">
+    <div class="modal-box">
+      <button class="modal-close" @click="activeOrder=null">✕</button>
+      <h2>Order Detail</h2>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <label>Order ID</label>
+          <p><code style="font-size:12px">{{ activeOrder.id }}</code></p>
+        </div>
+        <div class="detail-item">
+          <label>Date</label>
+          <p>{{ formatDate(activeOrder.createdAt) }}</p>
+        </div>
+        <div class="detail-item">
+          <label>Customer Name</label>
+          <p>{{ activeOrder.customer.name }}</p>
+        </div>
+        <div class="detail-item">
+          <label>Email</label>
+          <p>{{ activeOrder.customer.email }}</p>
+        </div>
+        <div class="detail-item">
+          <label>Phone</label>
+          <p>{{ activeOrder.customer.phone }}</p>
+        </div>
+        <div class="detail-item">
+          <label>Delivery Date</label>
+          <p>{{ activeOrder.customer.date }}</p>
+        </div>
+        <div class="detail-item full">
+          <label>Delivery Address</label>
+          <p>{{ activeOrder.customer.address }}</p>
+        </div>
+        <div class="detail-item full" v-if="activeOrder.customer.note">
+          <label>Note</label>
+          <p>{{ activeOrder.customer.note }}</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:14px;margin-bottom:10px;color:#888">Items Ordered</h3>
+      <div class="order-items-list">
+        <div class="order-item-row" v-for="item in activeOrder.items" :key="item.name">
+          <img :src="item.image" :alt="item.name">
+          <span class="name">{{ item.name }}</span>
+          <span class="price">{{ item.price }}</span>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:20px">
+        Total: <span style="color:#5f8872">{{ activeOrder.total }}</span>
+        <span style="font-size:13px;font-weight:400;color:#aaa;margin-left:8px">via {{ activeOrder.paymentMethod }}</span>
+      </div>
+
+      <h3 style="font-size:14px;margin-bottom:10px;color:#888">Payment Proof</h3>
+      <img v-if="activeOrder.proofImage" :src="activeOrder.proofImage" class="proof-full" alt="Proof">
+
+      <div class="status-row">
+        <div>
+          <label>Payment Status</label>
+          <select class="status-select" v-model="activeOrder.paymentStatus">
+            <option>Pending</option><option>Verified</option><option>Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label>Delivery Status</label>
+          <select class="status-select" v-model="activeOrder.deliveryStatus">
+            <option>Processing</option><option>Packed</option>
+            <option>Shipped</option><option>Delivered</option><option>Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <button class="save-btn" style="margin-top:18px" @click="saveFromModal">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ── Message Detail Modal ── -->
+  <div class="modal-overlay" v-if="activeMessage" @click.self="activeMessage=null">
+    <div class="modal-box">
+      <button class="modal-close" @click="activeMessage=null">✕</button>
+      <h2>{{ activeMessage.subject || 'Message' }}</h2>
+      <div class="detail-grid" style="margin-bottom:16px">
+        <div class="detail-item">
+          <label>From</label>
+          <p>{{ activeMessage.name }}</p>
+        </div>
+        <div class="detail-item">
+          <label>Email</label>
+          <p>{{ activeMessage.email }}</p>
+        </div>
+        <div class="detail-item full">
+          <label>Date</label>
+          <p>{{ formatDate(activeMessage.createdAt) }}</p>
+        </div>
+      </div>
+      <div class="msg-body">{{ activeMessage.message }}</div>
+
+      <div class="reply-box">
+        <h3 style="font-size:13px;color:#888;margin:18px 0 8px">Reply (draft — copy to email)</h3>
+        <textarea v-model="replyText" rows="4" placeholder="Type your reply…"></textarea>
+        <button class="reply-send-btn" @click="copyReply">📋 Copy Reply</button>
+        <p class="reply-sent" v-if="replyCopied">✓ Copied to clipboard!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      /* Auth */
+      loggedIn:   false,
+      loginForm:  { user: '', pass: '' },
+      loginError: '',
+
+      /* Tab */
+      tab: 'overview',
+
+      /* Data */
+      orders:   [],
+      messages: [],
+
+      /* Filters — orders */
+      orderSearch:    '',
+      orderPayFilter: '',
+      orderDelFilter: '',
+
+      /* Filters — messages */
+      msgSearch:    '',
+      msgReadFilter:'',
+
+      /* Filters — transactions */
+      txSearch:    '',
+      txPayFilter: '',
+
+      /* Modals */
+      activeOrder:   null,
+      activeMessage: null,
+      lightboxSrc:   null,
+
+      /* Reply */
+      replyText:   '',
+      replyCopied: false,
+
+      /* UI */
+      toast:       '',
+      lastRefresh: 'just now',
+    };
+  },
+
+  computed: {
+    tabLabel() {
+      return { overview:'Overview', orders:'Orders', messages:'Messages', transactions:'Transactions' }[this.tab] || '';
+    },
+    pendingOrders() {
+      return this.orders.filter(o => o.paymentStatus === 'Pending').length;
+    },
+    unreadMessages() {
+      return this.messages.filter(m => !m.read).length;
+    },
+    totalRevenue() {
+      const sum = this.orders
+        .filter(o => o.paymentStatus === 'Verified')
+        .reduce((a, o) => a + parseFloat(o.total.replace('$','')), 0);
+      return sum.toFixed(2);
+    },
+    avgOrder() {
+      if (!this.orders.length) return '0.00';
+      const sum = this.orders.reduce((a, o) => a + parseFloat(o.total.replace('$','')), 0);
+      return (sum / this.orders.length).toFixed(2);
+    },
+    filteredOrders() {
+      return this.orders.filter(o => {
+        const q = this.orderSearch.toLowerCase();
+        const matchQ = !q || o.id.toLowerCase().includes(q)
+          || o.customer.name.toLowerCase().includes(q)
+          || o.customer.email.toLowerCase().includes(q);
+        const matchP = !this.orderPayFilter || o.paymentStatus === this.orderPayFilter;
+        const matchD = !this.orderDelFilter || o.deliveryStatus === this.orderDelFilter;
+        return matchQ && matchP && matchD;
+      });
+    },
+    filteredMessages() {
+      return this.messages.filter(m => {
+        const q = this.msgSearch.toLowerCase();
+        const matchQ = !q || m.name.toLowerCase().includes(q)
+          || m.email.toLowerCase().includes(q)
+          || (m.subject||'').toLowerCase().includes(q);
+        const matchR = !this.msgReadFilter
+          || (this.msgReadFilter === 'read' && m.read)
+          || (this.msgReadFilter === 'unread' && !m.read);
+        return matchQ && matchR;
+      });
+    },
+    filteredTx() {
+      return this.orders.filter(o => {
+        const q = this.txSearch.toLowerCase();
+        const matchQ = !q || o.id.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q);
+        const matchP = !this.txPayFilter || o.paymentStatus === this.txPayFilter;
+        return matchQ && matchP;
+      });
+    },
+  },
+
+  methods: {
+    login() {
+      if (this.loginForm.user === 'admin' && this.loginForm.pass === 'admin') {
+        this.loggedIn   = true;
+        this.loginError = '';
+        this.loadData();
+      } else {
+        this.loginError = 'Incorrect username or password.';
+      }
+    },
+
+    logout() {
+      this.loggedIn  = false;
+      this.loginForm = { user: '', pass: '' };
+    },
+
+    loadData() {
+      this.orders   = JSON.parse(localStorage.getItem('sp_orders')   || '[]');
+      this.messages = JSON.parse(localStorage.getItem('sp_messages') || '[]');
+      const now = new Date();
+      this.lastRefresh = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    },
+
+    saveOrders() {
+      localStorage.setItem('sp_orders', JSON.stringify(this.orders));
+    },
+
+    saveMessages() {
+      localStorage.setItem('sp_messages', JSON.stringify(this.messages));
+    },
+
+    saveFromModal() {
+      this.saveOrders();
+      this.showToast('Order updated successfully!');
+      this.activeOrder = null;
+    },
+
+    openOrder(o) {
+      this.activeOrder = o;
+    },
+
+    openMessage(m) {
+      m.read = true;
+      this.saveMessages();
+      this.activeMessage = m;
+      this.replyText = '';
+      this.replyCopied = false;
+    },
+
+    toggleRead(m) {
+      m.read = !m.read;
+      this.saveMessages();
+    },
+
+    viewProof(src) {
+      this.lightboxSrc = src;
+    },
+
+    copyReply() {
+      if (!this.replyText) return;
+      navigator.clipboard.writeText(this.replyText).then(() => {
+        this.replyCopied = true;
+        setTimeout(() => this.replyCopied = false, 2500);
+      });
+    },
+
+    formatDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('en-PH', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    },
+
+    paymentBadge(s) {
+      return {
+        badge: true,
+        'badge-pending':  s === 'Pending',
+        'badge-verified': s === 'Verified',
+        'badge-rejected': s === 'Rejected',
+      };
+    },
+
+    deliveryBadge(s) {
+      return {
+        badge: true,
+        'badge-processing': s === 'Processing',
+        'badge-packed':     s === 'Packed',
+        'badge-shipped':    s === 'Shipped',
+        'badge-delivered':  s === 'Delivered',
+        'badge-cancelled':  s === 'Cancelled',
+      };
+    },
+
+    showToast(msg) {
+      this.toast = msg;
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => this.toast = '', 2500);
+    },
+
+    /* Auto-refresh every 30s when logged in */
+    startAutoRefresh() {
+      this._refreshInterval = setInterval(() => {
+        if (this.loggedIn) this.loadData();
+      }, 30000);
+    },
+  },
+
+  mounted() {
+    this.startAutoRefresh();
+  },
+
+  beforeUnmount() {
+    clearInterval(this._refreshInterval);
+  },
+}).mount('#admin');
+</script>
+</body>
+</html>
