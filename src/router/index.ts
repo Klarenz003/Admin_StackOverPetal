@@ -5,20 +5,13 @@ import { useAuthStore } from '@/stores/auth'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('@/pages/LoginPage.vue'),
-    },
-    {
-      path: '/',
-      component: () => import('@/pages/DashboardLayout.vue'),
-      meta: { requiresAuth: true },
-      children: [
+    { path: '/login', name: 'login', component: () => import('@/pages/LoginPage.vue'), },
+    { path: '/', component: () => import('@/pages/DashboardLayout.vue'), meta: { requiresAuth: true }, children: [
         { path: '',          redirect: '/overview' },
         { path: 'overview',     name: 'overview',     component: () => import('@/pages/OverviewPage.vue')     },
         { path: 'orders',       name: 'orders',       component: () => import('@/pages/OrdersPage.vue')       },
         { path: 'messages',     name: 'messages',     component: () => import('@/pages/MessagesPage.vue')     },
+        { path: 'products', name: 'products', component: () => import('@/pages/ProductsPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
       ],
     },

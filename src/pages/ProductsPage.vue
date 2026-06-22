@@ -1,0 +1,199 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { supabase } from '@/supabaseClient'
+
+interface Product {
+  id: string
+  name: string
+  price: number
+  image: string
+  category: string
+  badge: string | null
+  stock: number
+  featured: boolean
+}
+
+const products = ref<Product[]>([])
+const loading = ref(false)
+const showForm = ref(false)
+const editingId = ref<string | null>(null)
+
+const form = ref({
+  name: '',
+  price: 0,
+  image: '',
+  category: 'Romance',
+  badge: null as string | null,
+  stock: 10,
+  featured: false,
+})
+
+async function loadProducts() {
+  loading.value = true
+  const { data } = await supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
+  products.value = data || []
+  loading.value = false
+}
+
+async function saveProduct() {
+  if (!form.value.name || !form.value.price) {
+    alert('Please fill in all required fields')
+    return
+  }
+
+const payload = {
+  name: form.value.name,
+  price: form.value.price,
+  image: form.value.image,
+  category: form.value.category,
+  badge: form.value.badge || null,
+  stock: form.value.stock,
+  featured: form.value.featured,
+}
+
+  if (editingId.value) {
+    // Update
+    const { error } = await supabase
+      .from('products')
+      .update(payload)
+      .eq('id', editingId.value)
+    if (error) {
+      alert('Error updating product')
+      return
+    }
+  } else {
+    // Insert
+    const { error } = await supabase
+      .from('products')
+      .insert([payload])
+    if (error) {
+      alert('Error creating product')
+      return
+    }
+  }
+
+  resetForm()
+  loadProducts()
+}
+
+function editProduct(product: Product) {
+  editingId.value = product.id
+  form.value = { ...product }
+  showForm.value = true
+}
+
+async function deleteProduct(id: string) {
+  if (!confirm('Delete this product?')) return
+  const { error } = await supabase.from('products').delete().eq('id', id)
+  if (error) {
+    alert('Error deleting product')
+    return
+  }
+  loadProducts()
+}
+
+function resetForm() {
+  editingId.value = null
+  form.value = {
+    name: '',
+    price: 0,
+    image: '',
+    category: 'Romance',
+    badge: null,
+    stock: 10,
+    featured: false,
+  }
+    showForm.value = false
+}
+
+onMounted(() => {
+  loadProducts()
+})
+</script>
+
+<template>
+  <div class="products-page">
+    <div class="products-header">
+      <h2>Product Inventory</h2>
+      <button class="btn-primary" @click="showForm = !showForm">
+        {{ showForm ? 'Cancel' : '+ Add Product' }}
+      </button>
+    </div>
+
+    <!-- Form -->
+    <div v-if="showForm" class="product-form">
+      <h3>{{ editingId ? 'Edit Product' : 'New Product' }}</h3>
+      <div class="form-group">
+        <label>Name *</label>
+        <input v-model="form.name" type="text" placeholder="Product name" />
+      </div>
+      <div class="form-group">
+        <label>Price *</label>
+        <input v-model.number="form.price" type="number" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label>Image Path</label>
+        <input v-model="form.image" type="text" placeholder="/images/b1.png" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select v-model="form.category">
+          <option>Romance</option>
+          <option>Birthday</option>
+          <option>Sympathy</option>
+          <option>Celebration</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Badge</label>
+        <input v-model="form.badge" type="text" placeholder="Best Seller, New, etc." />
+      </div>
+      <div class="form-group">
+        <label>Stock</label>
+        <input v-model.number="form.stock" type="number" placeholder="10" />
+      </div>
+      <div class="form-group checkbox">
+        <label>
+          <input v-model="form.featured" type="checkbox" />
+          Featured on homepage
+        </label>
+      </div>
+      <button class="btn-primary" style="width: 100%; margin-top: 16px" @click="saveProduct">
+        {{ editingId ? 'Update' : 'Create' }} Product
+      </button>
+    </div>
+
+    <!-- Products Table -->
+    <div class="products-table">
+      <div v-if="loading" class="loading">Loading products...</div>
+      <table v-else>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Featured</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="product in products" :key="product.id">
+            <td><strong>{{ product.name }}</strong></td>
+            <td>{{ product.category }}</td>
+            <td>₱{{ product.price.toLocaleString() }}</td>
+            <td>{{ product.stock }}</td>
+            <td>{{ product.featured ? '✓' : '—' }}</td>
+            <td>
+              <button class="btn-small" @click="editProduct(product)">Edit</button>
+              <button class="btn-small btn-danger" @click="deleteProduct(product.id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
