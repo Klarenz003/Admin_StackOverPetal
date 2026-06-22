@@ -154,18 +154,26 @@ export const useAdminStore = defineStore('admin', () => {
   async function saveOrders() {
     if (!activeOrder.value) return
     
+    const statusValue = activeOrder.value.paymentStatus.toLowerCase()
+    const deliveryValue = activeOrder.value.deliveryStatus.toLowerCase()
+    
+    console.log('Updating order:', activeOrder.value.id, { status: statusValue, delivery_status: deliveryValue })
+    
     const { error } = await supabase
       .from('orders')
       .update({
-        status: activeOrder.value.paymentStatus.toLowerCase(),
-        delivery_status: activeOrder.value.deliveryStatus.toLowerCase(),
+        status: statusValue,
+        delivery_status: deliveryValue,
       })
       .eq('id', activeOrder.value.id)
 
     if (error) {
-      showToast('Failed to update order.')
+      console.error('Update error:', error)
+      showToast('Failed to update order: ' + error.message)
       return
     }
+    
+    showToast('Order updated!')
   }
 
 
