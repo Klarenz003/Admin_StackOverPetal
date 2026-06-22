@@ -39,6 +39,9 @@ function logout() {
           <span class="icon">💬</span> Messages
           <span class="nav-badge" v-if="admin.unreadMessages > 0">{{ admin.unreadMessages }}</span>
         </RouterLink>
+        <RouterLink to="/products" class="nav-item" active-class="active">
+          <span class="icon">🌸</span> Products
+        </RouterLink>
         <RouterLink to="/transactions" class="nav-item" active-class="active">
           <span class="icon">💳</span> Transactions
         </RouterLink>
