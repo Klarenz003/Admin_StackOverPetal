@@ -365,6 +365,18 @@ tr:hover td { background: #fdf9f8; }
   color: #999;
 }
 
+.products-table tr {
+  transition: opacity 0.2s;
+}
+
+.products-table tr.dragging {
+  opacity: 0.5;
+}
+
+.products-table tr[draggable="true"] {
+  cursor: move;
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }

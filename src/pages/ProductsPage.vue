@@ -33,7 +33,7 @@ async function loadProducts() {
   const { data } = await supabase
     .from('products')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('order', { ascending: true })
   products.value = data || []
   loading.value = false
 }
@@ -112,6 +112,36 @@ function resetForm() {
 onMounted(() => {
   loadProducts()
 })
+
+const draggedIndex = ref<number | null>(null)
+
+function dragStart(index: number) {
+  draggedIndex.value = index
+}
+
+function dragOver(index: number) {
+  if (draggedIndex.value === null || draggedIndex.value === index) return
+  
+  const draggedItem = products.value[draggedIndex.value]
+  products.value.splice(draggedIndex.value, 1)
+  products.value.splice(index, 0, draggedItem)
+  draggedIndex.value = index
+}
+
+function dragDrop(index: number) {
+  // Drop happens, will save in dragEnd
+}
+
+async function dragEnd() {
+  // Save new order to Supabase
+  for (let i = 0; i < products.value.length; i++) {
+    await supabase
+      .from('products')
+      .update({ order: i })
+      .eq('id', products.value[i].id)
+  }
+  draggedIndex.value = null
+}
 </script>
 
 <template>
@@ -167,33 +197,44 @@ onMounted(() => {
     </div>
 
     <!-- Products Table -->
-    <div class="products-table">
-      <div v-if="loading" class="loading">Loading products...</div>
-      <table v-else>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th>Featured</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="product in products" :key="product.id">
-            <td><strong>{{ product.name }}</strong></td>
-            <td>{{ product.category }}</td>
-            <td>₱{{ product.price.toLocaleString() }}</td>
-            <td>{{ product.stock }}</td>
-            <td>{{ product.featured ? '✓' : '—' }}</td>
-            <td>
-              <button class="btn-small" @click="editProduct(product)">Edit</button>
-              <button class="btn-small btn-danger" @click="deleteProduct(product.id)">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+<div class="products-table">
+  <div v-if="loading" class="loading">Loading products...</div>
+  <table v-else>
+    <thead>
+      <tr>
+        <th style="width: 40px">⋮</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Featured</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        v-for="(product, index) in products"
+        :key="product.id"
+        draggable="true"
+        @dragstart="dragStart(index)"
+        @dragover.prevent="dragOver(index)"
+        @drop="dragDrop(index)"
+        @dragend="dragEnd"
+        :class="{ 'dragging': draggedIndex === index }"
+      >
+        <td style="cursor: grab; text-align: center">⋮</td>
+        <td><strong>{{ product.name }}</strong></td>
+        <td>{{ product.category }}</td>
+        <td>₱{{ product.price.toLocaleString() }}</td>
+        <td>{{ product.stock }}</td>
+        <td>{{ product.featured ? '✓' : '—' }}</td>
+        <td>
+          <button class="btn-small" @click="editProduct(product)">Edit</button>
+          <button class="btn-small btn-danger" @click="deleteProduct(product.id)">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
   </div>
 </template>
