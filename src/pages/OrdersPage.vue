@@ -58,28 +58,14 @@ const admin = useAdminStore()
               <span v-else class="no-proof">—</span>
             </td>
             <td>
-              <select
-                class="status-select"
-                v-model="o.paymentStatus"
-                @change="admin.saveOrders(); admin.showToast('Payment status updated')"
-              >
-                <option>Pending</option>
-                <option>Verified</option>
-                <option>Rejected</option>
-              </select>
+              <span :class="admin.paymentBadgeClass(o.paymentStatus)">
+                {{ o.paymentStatus }}
+              </span>
             </td>
             <td>
-              <select
-                class="status-select"
-                v-model="o.deliveryStatus"
-                @change="admin.saveOrders(); admin.showToast('Delivery status updated')"
-              >
-                <option>Processing</option>
-                <option>Packed</option>
-                <option>Shipped</option>
-                <option>Delivered</option>
-                <option>Cancelled</option>
-              </select>
+              <span :class="admin.deliveryBadgeClass(o.deliveryStatus)">
+                {{ o.deliveryStatus }}
+              </span>
             </td>
             <td class="date-cell">{{ admin.formatDate(o.createdAt) }}</td>
           </tr>
