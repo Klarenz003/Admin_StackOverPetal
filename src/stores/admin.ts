@@ -133,7 +133,7 @@ export const useAdminStore = defineStore('admin', () => {
         ? supabase.storage.from('proofs').getPublicUrl(o.proof_url).data.publicUrl
         : '',
       paymentStatus:  capitalize(o.status) as any,
-      deliveryStatus: 'Processing' as any,
+      deliveryStatus: (o.delivery_status ? capitalize(o.delivery_status) : 'Processing') as any,
     }))
 
     messages.value = (msgsData || []).map(m => ({
@@ -153,12 +153,19 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function saveOrders() {
     if (!activeOrder.value) return
+    
     const { error } = await supabase
       .from('orders')
-      .update({ status: activeOrder.value.paymentStatus.toLowerCase() })
+      .update({
+        status: activeOrder.value.paymentStatus.toLowerCase(),
+        delivery_status: activeOrder.value.deliveryStatus.toLowerCase(),
+      })
       .eq('id', activeOrder.value.id)
 
-    if (error) { showToast('Failed to update order.'); return }
+    if (error) {
+      showToast('Failed to update order.')
+      return
+    }
   }
 
 
