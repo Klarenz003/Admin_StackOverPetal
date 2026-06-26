@@ -11,6 +11,7 @@ const router = createRouter({
         { path: 'overview',     name: 'overview',     component: () => import('@/pages/OverviewPage.vue')     },
         { path: 'orders',       name: 'orders',       component: () => import('@/pages/OrdersPage.vue')       },
         { path: 'messages',     name: 'messages',     component: () => import('@/pages/MessagesPage.vue')     },
+        { path: 'letters', name: 'letters', component: () => import('@/pages/LettersPage.vue') },
         { path: 'products', name: 'products', component: () => import('@/pages/ProductsPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
       ],

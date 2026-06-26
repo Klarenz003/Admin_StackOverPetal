@@ -45,6 +45,9 @@ function logout() {
         <RouterLink to="/transactions" class="nav-item" active-class="active">
           <span class="icon">💳</span> Transactions
         </RouterLink>
+        <RouterLink to="/letters" class="nav-item" active-class="active">
+          <span class="icon">💌</span> Letters
+        </RouterLink>
       </nav>
 
       <div class="sidebar-footer">
