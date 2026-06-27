@@ -11,7 +11,6 @@ interface Letter {
   petal_messages: string[]
   memories: string[]
   angle_photos: string[]
-  angle_video: string
   published: boolean
   template: string
   created_at: string
@@ -61,37 +60,39 @@ async function saveLetter() {
   loadLetters()
 }
 
-// ── Upload Video ───────────────────────────────────────────────────
-const uploadingVideo = ref(false)
-
-async function uploadVideo(e: Event) {
+// ── Upload Angle Photos ────────────────────────────────────────────
+async function uploadAnglePhotos(e: Event) {
   if (!activeLetter.value) return
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+  const files = (e.target as HTMLInputElement).files
+  if (!files || files.length === 0) return
 
-  uploadingVideo.value = true
-  const fileName = `${activeLetter.value.id}/360-video.mp4`
-  const { data, error } = await supabase.storage
-    .from('letter-photos')
-    .upload(fileName, file, { upsert: true })
+  uploading.value = true
+  const uploaded: string[] = [...activeLetter.value.angle_photos]
 
-  if (error) { alert('Upload failed'); uploadingVideo.value = false; return }
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const fileName = `${activeLetter.value.id}/angle-${Date.now()}-${i}.png`
+    const { data, error } = await supabase.storage
+      .from('letter-photos')
+      .upload(fileName, file, { upsert: true })
+    if (error) { console.error(error); continue }
+    const { data: urlData } = supabase.storage
+      .from('letter-photos')
+      .getPublicUrl(data.path)
+    uploaded.push(urlData.publicUrl)
+  }
 
-  const { data: urlData } = supabase.storage
-    .from('letter-photos')
-    .getPublicUrl(data.path)
-
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from('letters')
-    .update({ angle_video: urlData.publicUrl })
+    .update({ angle_photos: uploaded })
     .eq('id', activeLetter.value.id)
 
-  if (!updateError) {
-    activeLetter.value.angle_video = urlData.publicUrl
+  if (!error) {
+    activeLetter.value.angle_photos = uploaded
     loadLetters()
   }
 
-  uploadingVideo.value = false
+  uploading.value = false
 }
 
 // ── Remove Angle Photo ─────────────────────────────────────────────
@@ -108,12 +109,13 @@ async function removeAnglePhoto(index: number) {
 // ── Publish & Generate QR ──────────────────────────────────────────
 async function publishLetter() {
   if (!activeLetter.value) return
-  if (!activeLetter.value.angle_video) {
-    alert('Please upload a 360° video first')
+  if (activeLetter.value.angle_photos.length < 0) {
+    alert('Please upload at least 1 angle photos for the 360° view')
     return
   }
 
   publishing.value = true
+
   const { error } = await supabase
     .from('letters')
     .update({ published: true })
@@ -243,32 +245,37 @@ onMounted(() => loadLetters())
         </div>
       </div>
 
-      <!-- 360° Video -->
+      <!-- 360° Angle Photos -->
       <div class="detail-section">
         <div class="section-title-row">
-          <h3>360° Bouquet Video</h3>
-          <span v-if="activeLetter.angle_video" class="badge-published">Uploaded ✓</span>
+          <h3>360° Bouquet Photos</h3>
+          <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} frames</span>
         </div>
-        <p class="section-hint">Upload one MP4 video of the bouquet rotating 360°. Recommended: 720p, H.264, under 30MB.</p>
+        <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front → right → back → left → front). More frames = smoother rotation.</p>
 
-        <video
-          v-if="activeLetter.angle_video"
-          :src="activeLetter.angle_video"
-          class="video-preview"
-          controls
-          muted
-        ></video>
+        <div v-if="activeLetter.angle_photos?.length > 0" class="angle-grid">
+          <div
+            v-for="(photo, i) in activeLetter.angle_photos"
+            :key="i"
+            class="angle-item"
+          >
+            <img :src="photo" :alt="`Angle ${i + 1}`" />
+            <button class="remove-angle" @click="removeAnglePhoto(i)">✕</button>
+            <span class="angle-num">{{ i + 1 }}</span>
+          </div>
+        </div>
 
-        <div class="upload-angle-zone" @click="($refs.videoInput as HTMLInputElement).click()">
+        <div class="upload-angle-zone" @click="($refs.angleInput as HTMLInputElement).click()">
           <input
-            ref="videoInput"
+            ref="angleInput"
             type="file"
-            accept="video/mp4,video/webm"
+            accept="image/png,image/webp"
+            multiple
             style="display:none"
-            @change="uploadVideo"
+            @change="uploadAnglePhotos"
           />
-          <span v-if="uploadingVideo">Uploading video...</span>
-          <span v-else>{{ activeLetter.angle_video ? '↺ Replace Video' : '+ Upload 360° Video (MP4)' }}</span>
+          <span v-if="uploading">Uploading...</span>
+          <span v-else>+ Upload Angle Photos (PNG with transparent bg)</span>
         </div>
       </div>
 
