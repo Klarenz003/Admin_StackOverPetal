@@ -14,6 +14,13 @@ interface Letter {
   published: boolean
   template: string
   created_at: string
+  // joined from orders
+  order?: {
+    customer_name: string
+    email: string
+    phone: string
+    delivery_date: string
+  }
 }
 
 const letters = ref<Letter[]>([])
@@ -29,7 +36,15 @@ async function loadLetters() {
   loading.value = true
   const { data, error } = await supabase
     .from('letters')
-    .select('*')
+    .select(`
+      *,
+      order:order_id (
+        customer_name,
+        email,
+        phone,
+        delivery_date
+      )
+    `)
     .order('created_at', { ascending: false })
   if (error) console.error(error)
   letters.value = data || []
@@ -171,7 +186,9 @@ onMounted(() => loadLetters())
             <div class="letter-avatar">{{ letter.recipient?.charAt(0) || '?' }}</div>
             <div>
               <p class="letter-recipient">To: <strong>{{ letter.recipient }}</strong></p>
-              <p class="letter-sender">From: {{ letter.sender }}</p>
+              <p class="letter-sender">From: <strong>{{ letter.sender }}</strong></p>
+              <p class="letter-order">{{ letter.order?.email }} · {{ letter.order?.phone }}</p>
+              <p class="letter-order">Delivery: {{ letter.order?.delivery_date }}</p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>
             </div>
           </div>
@@ -190,7 +207,14 @@ onMounted(() => loadLetters())
       <button class="back-btn" @click="activeLetter = null">← Back to Letters</button>
 
       <div class="detail-header">
-        <h2>Letter for {{ activeLetter.recipient }}</h2>
+        <div>
+          <h2>Letter for {{ activeLetter.recipient }}</h2>
+          <p class="detail-order-id">
+            From: <strong>{{ activeLetter.sender }}</strong>
+            &nbsp;·&nbsp;
+            Order: <code>{{ activeLetter.order_id }}</code>
+          </p>
+        </div>
         <span :class="activeLetter.published ? 'badge-published' : 'badge-draft'">
           {{ activeLetter.published ? 'Published' : 'Draft' }}
         </span>
