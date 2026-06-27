@@ -11,6 +11,7 @@ interface Letter {
   petal_messages: string[]
   memories: string[]
   angle_photos: string[]
+  angle_video: string
   published: boolean
   template: string
   created_at: string
@@ -60,39 +61,37 @@ async function saveLetter() {
   loadLetters()
 }
 
-// ── Upload Angle Photos ────────────────────────────────────────────
-async function uploadAnglePhotos(e: Event) {
+// ── Upload Video ───────────────────────────────────────────────────
+const uploadingVideo = ref(false)
+
+async function uploadVideo(e: Event) {
   if (!activeLetter.value) return
-  const files = (e.target as HTMLInputElement).files
-  if (!files || files.length === 0) return
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
 
-  uploading.value = true
-  const uploaded: string[] = [...activeLetter.value.angle_photos]
+  uploadingVideo.value = true
+  const fileName = `${activeLetter.value.id}/360-video.mp4`
+  const { data, error } = await supabase.storage
+    .from('letter-photos')
+    .upload(fileName, file, { upsert: true })
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
-    const fileName = `${activeLetter.value.id}/angle-${Date.now()}-${i}.png`
-    const { data, error } = await supabase.storage
-      .from('letter-photos')
-      .upload(fileName, file, { upsert: true })
-    if (error) { console.error(error); continue }
-    const { data: urlData } = supabase.storage
-      .from('letter-photos')
-      .getPublicUrl(data.path)
-    uploaded.push(urlData.publicUrl)
-  }
+  if (error) { alert('Upload failed'); uploadingVideo.value = false; return }
 
-  const { error } = await supabase
+  const { data: urlData } = supabase.storage
+    .from('letter-photos')
+    .getPublicUrl(data.path)
+
+  const { error: updateError } = await supabase
     .from('letters')
-    .update({ angle_photos: uploaded })
+    .update({ angle_video: urlData.publicUrl })
     .eq('id', activeLetter.value.id)
 
-  if (!error) {
-    activeLetter.value.angle_photos = uploaded
+  if (!updateError) {
+    activeLetter.value.angle_video = urlData.publicUrl
     loadLetters()
   }
 
-  uploading.value = false
+  uploadingVideo.value = false
 }
 
 // ── Remove Angle Photo ─────────────────────────────────────────────
@@ -109,13 +108,12 @@ async function removeAnglePhoto(index: number) {
 // ── Publish & Generate QR ──────────────────────────────────────────
 async function publishLetter() {
   if (!activeLetter.value) return
-  if (activeLetter.value.angle_photos.length < 0) {
-    alert('Please upload at least 1 angle photos for the 360° view')
+  if (!activeLetter.value.angle_video) {
+    alert('Please upload a 360° video first')
     return
   }
 
   publishing.value = true
-
   const { error } = await supabase
     .from('letters')
     .update({ published: true })
