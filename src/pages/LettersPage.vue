@@ -14,13 +14,6 @@ interface Letter {
   published: boolean
   template: string
   created_at: string
-  // joined from orders
-  order?: {
-    customer_name: string
-    email: string
-    phone: string
-    delivery_date: string
-  }
 }
 
 const letters = ref<Letter[]>([])
@@ -36,15 +29,7 @@ async function loadLetters() {
   loading.value = true
   const { data, error } = await supabase
     .from('letters')
-    .select(`
-      *,
-      order:order_id (
-        customer_name,
-        email,
-        phone,
-        delivery_date
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
   if (error) console.error(error)
   letters.value = data || []
@@ -187,8 +172,7 @@ onMounted(() => loadLetters())
             <div>
               <p class="letter-recipient">To: <strong>{{ letter.recipient }}</strong></p>
               <p class="letter-sender">From: <strong>{{ letter.sender }}</strong></p>
-              <p class="letter-order">{{ letter.order?.email }} · {{ letter.order?.phone }}</p>
-              <p class="letter-order">Delivery: {{ letter.order?.delivery_date }}</p>
+              <p class="letter-order">Order: <code>{{ letter.order_id?.slice(0, 8) }}...</code></p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>
             </div>
           </div>
