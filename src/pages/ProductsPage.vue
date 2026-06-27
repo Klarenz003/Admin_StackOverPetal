@@ -113,6 +113,8 @@ onMounted(() => {
   loadProducts()
 })
 
+
+
 const draggedIndex = ref<number | null>(null)
 
 function dragStart(index: number) {
