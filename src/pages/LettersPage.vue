@@ -109,8 +109,8 @@ async function removeAnglePhoto(index: number) {
 // ── Publish & Generate QR ──────────────────────────────────────────
 async function publishLetter() {
   if (!activeLetter.value) return
-  if (activeLetter.value.angle_photos.length < 8) {
-    alert('Please upload at least 8 angle photos for the 360° view')
+  if (activeLetter.value.angle_photos.length < 0) {
+    alert('Please upload at least 1 angle photos for the 360° view')
     return
   }
 
@@ -241,9 +241,9 @@ onMounted(() => loadLetters())
       <div class="detail-section">
         <div class="section-title-row">
           <h3>360° Bouquet Photos</h3>
-          <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} / 24</span>
+          <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} frames</span>
         </div>
-        <p class="section-hint">Upload 20-24 PNG photos with transparent background in order (front → right → back → left → front)</p>
+        <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front → right → back → left → front). More frames = smoother rotation.</p>
 
         <div v-if="activeLetter.angle_photos?.length > 0" class="angle-grid">
           <div
