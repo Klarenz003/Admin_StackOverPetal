@@ -243,37 +243,32 @@ onMounted(() => loadLetters())
         </div>
       </div>
 
-      <!-- 360° Angle Photos -->
+      <!-- 360° Video -->
       <div class="detail-section">
         <div class="section-title-row">
-          <h3>360° Bouquet Photos</h3>
-          <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} frames</span>
+          <h3>360° Bouquet Video</h3>
+          <span v-if="activeLetter.angle_video" class="badge-published">Uploaded ✓</span>
         </div>
-        <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front → right → back → left → front). More frames = smoother rotation.</p>
+        <p class="section-hint">Upload one MP4 video of the bouquet rotating 360°. Recommended: 720p, H.264, under 30MB.</p>
 
-        <div v-if="activeLetter.angle_photos?.length > 0" class="angle-grid">
-          <div
-            v-for="(photo, i) in activeLetter.angle_photos"
-            :key="i"
-            class="angle-item"
-          >
-            <img :src="photo" :alt="`Angle ${i + 1}`" />
-            <button class="remove-angle" @click="removeAnglePhoto(i)">✕</button>
-            <span class="angle-num">{{ i + 1 }}</span>
-          </div>
-        </div>
+        <video
+          v-if="activeLetter.angle_video"
+          :src="activeLetter.angle_video"
+          class="video-preview"
+          controls
+          muted
+        ></video>
 
-        <div class="upload-angle-zone" @click="($refs.angleInput as HTMLInputElement).click()">
+        <div class="upload-angle-zone" @click="($refs.videoInput as HTMLInputElement).click()">
           <input
-            ref="angleInput"
+            ref="videoInput"
             type="file"
-            accept="image/png,image/webp"
-            multiple
+            accept="video/mp4,video/webm"
             style="display:none"
-            @change="uploadAnglePhotos"
+            @change="uploadVideo"
           />
-          <span v-if="uploading">Uploading...</span>
-          <span v-else>+ Upload Angle Photos (PNG with transparent bg)</span>
+          <span v-if="uploadingVideo">Uploading video...</span>
+          <span v-else>{{ activeLetter.angle_video ? '↺ Replace Video' : '+ Upload 360° Video (MP4)' }}</span>
         </div>
       </div>
 
