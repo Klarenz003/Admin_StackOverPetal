@@ -151,13 +151,28 @@ export const useAdminStore = defineStore('admin', () => {
     })
   }
 
-  async function saveOrders() {
-    if (!activeOrder.value) return
+  function toTrackingStatus(order: Order) {
+    if (order.paymentStatus === 'Rejected') return 'rejected'
+    if (order.paymentStatus === 'Pending') return 'pending'
+
+    const deliveryMap: Record<string, string> = {
+      Processing: 'confirmed',
+      Packed: 'preparing',
+      Shipped: 'out_for_delivery',
+      Delivered: 'delivered',
+      Cancelled: 'issue',
+    }
+
+    return deliveryMap[order.deliveryStatus] || 'confirmed'
+  }
+
+  async function saveOrders(orderToSave = activeOrder.value) {
+    if (!orderToSave) return
     
-    const statusValue = activeOrder.value.paymentStatus.toLowerCase()
-    const deliveryValue = activeOrder.value.deliveryStatus.toLowerCase()
+    const statusValue = toTrackingStatus(orderToSave)
+    const deliveryValue = orderToSave.deliveryStatus.toLowerCase()
     
-    console.log('Updating order:', activeOrder.value.id, { status: statusValue, delivery_status: deliveryValue })
+    console.log('Updating order:', orderToSave.id, { status: statusValue, delivery_status: deliveryValue })
     
     const { error } = await supabase
       .from('orders')
@@ -165,7 +180,7 @@ export const useAdminStore = defineStore('admin', () => {
         status: statusValue,
         delivery_status: deliveryValue,
       })
-      .eq('id', activeOrder.value.id)
+      .eq('id', orderToSave.id)
 
     if (error) {
       console.error('Update error:', error)

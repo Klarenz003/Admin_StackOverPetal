@@ -64,7 +64,7 @@ const admin = useAdminStore()
                 <select
                   class="status-select"
                   v-model="o.paymentStatus"
-                  @change="admin.saveOrders(); admin.showToast('Payment status updated')"
+                  @change="admin.saveOrders(o); admin.showToast('Payment status updated')"
                 >
                   <option>Pending</option>
                   <option>Verified</option>
