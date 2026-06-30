@@ -15,6 +15,16 @@ export interface OrderItem {
   image: string
   quantity?: number
   preOrder?: boolean
+  prepDays?: number
+  deliveryRestrictions?: string
+}
+
+export interface OrderStatusHistory {
+  id: string
+  status: string
+  label: string
+  note?: string
+  createdAt?: string
 }
 
 export type PaymentStatus  = 'Pending' | 'Verified' | 'Rejected'
@@ -33,6 +43,8 @@ export interface Order {
   trackingStatus: string
   letterId?: string
   letterPublished?: boolean
+  adminNote?: string
+  statusHistory?: OrderStatusHistory[]
 }
 
 export interface Message {

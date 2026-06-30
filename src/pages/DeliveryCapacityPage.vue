@@ -115,7 +115,19 @@ onMounted(() => {
 
     <div class="products-table">
       <div v-if="loading" class="loading">Loading delivery slots...</div>
-      <table v-else>
+      <div v-else class="delivery-calendar-grid">
+        <button
+          v-for="slot in slots"
+          :key="`cal-${slot.delivery_date}`"
+          type="button"
+          :class="['delivery-day-card', { full: slot.is_full, limited: slot.is_limited, selected: selectedDate === slot.delivery_date }]"
+          @click="useSlot(slot)"
+        >
+          <strong>{{ new Date(slot.delivery_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}</strong>
+          <span>{{ slot.remaining_slots }} left</span>
+        </button>
+      </div>
+      <table v-if="!loading">
         <thead>
           <tr>
             <th>Date</th>

@@ -10,6 +10,7 @@ export const useAdminStore = defineStore('admin', () => {
   const tab         = ref<AdminTab>('overview')
   const orders      = ref<Order[]>([])
   const messages    = ref<Message[]>([])
+  const products    = ref<any[]>([])
   const lastRefresh = ref('just now')
   const toast       = ref('')
   let   _toastTimer = 0
@@ -32,6 +33,7 @@ export const useAdminStore = defineStore('admin', () => {
   const activeOrder   = ref<Order | null>(null)
   const activeMessage = ref<Message | null>(null)
   const lightboxSrc   = ref<string | null>(null)
+  const savingOrderIds = new Set<string>()
 
   // Reply
   const replyText   = ref('')
@@ -56,6 +58,27 @@ export const useAdminStore = defineStore('admin', () => {
   const preorderOrders = computed(() =>
     orders.value.filter(o => isPreorder(o)).length
   )
+
+  const lowStockProducts = computed(() =>
+    products.value.filter(p => Number(p.stock || 0) > 0 && Number(p.stock || 0) <= 3)
+  )
+
+  const outOfStockProducts = computed(() =>
+    products.value.filter(p => Number(p.stock || 0) <= 0)
+  )
+
+  const bestSellingItems = computed(() => {
+    const counts = new Map<string, number>()
+    orders.value.forEach(order => {
+      order.items.forEach(item => {
+        counts.set(item.name, (counts.get(item.name) || 0) + (item.quantity || 1))
+      })
+    })
+    return Array.from(counts.entries())
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5)
+  })
 
   const totalRevenue = computed(() => {
     const sum = orders.value
@@ -110,7 +133,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   // ── Actions ────────────────────────────────────────────────────
     async function loadData() {
-    const [{ data: ordersData }, { data: msgsData }, { data: lettersData }] = await Promise.all([
+    const [{ data: ordersData }, { data: msgsData }, { data: lettersData }, { data: historyData }, { data: productsData }] = await Promise.all([
       supabase
         .from('orders')
         .select('*')
@@ -122,11 +145,24 @@ export const useAdminStore = defineStore('admin', () => {
       supabase
         .from('letters')
         .select('id, order_id, published'),
+      supabase
+        .from('order_status_history')
+        .select('*')
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('products')
+        .select('id, name, stock, pre_order_allowed, prep_days, delivery_restrictions'),
     ])
 
     const lettersByOrder = new Map(
       (lettersData || []).map(letter => [letter.order_id, letter])
     )
+    const historyByOrder = new Map<string, any[]>()
+    ;(historyData || []).forEach(item => {
+      const list = historyByOrder.get(item.order_id) || []
+      list.push(item)
+      historyByOrder.set(item.order_id, list)
+    })
 
     orders.value = (ordersData || []).map(o => ({
       id:             o.id,
@@ -150,7 +186,17 @@ export const useAdminStore = defineStore('admin', () => {
       trackingStatus: o.status || 'pending',
       letterId:       lettersByOrder.get(o.id)?.id,
       letterPublished: !!lettersByOrder.get(o.id)?.published,
+      adminNote:      o.admin_note || '',
+      statusHistory:  (historyByOrder.get(o.id) || []).map(item => ({
+        id: item.id,
+        status: item.status,
+        label: item.label,
+        note: item.note,
+        createdAt: item.created_at,
+      })),
     }))
+
+    products.value = productsData || []
 
     messages.value = (msgsData || []).map(m => ({
       id:        m.id,
@@ -185,28 +231,96 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function saveOrders(orderToSave = activeOrder.value) {
     if (!orderToSave) return
+    if (savingOrderIds.has(orderToSave.id)) return
+    savingOrderIds.add(orderToSave.id)
     
-    const statusValue = toTrackingStatus(orderToSave)
-    const deliveryValue = orderToSave.deliveryStatus.toLowerCase()
-    
-    console.log('Updating order:', orderToSave.id, { status: statusValue, delivery_status: deliveryValue })
-    
-    const { error } = await supabase
-      .from('orders')
-      .update({
-        status: statusValue,
-        delivery_status: deliveryValue,
-        delivery_date: orderToSave.customer.date,
-      })
-      .eq('id', orderToSave.id)
+    try {
+      const statusValue = toTrackingStatus(orderToSave)
+      const deliveryValue = orderToSave.deliveryStatus.toLowerCase()
+      const existingOrder = orders.value.find(o => o.id === orderToSave.id)
+      const latestHistoryStatus = orderToSave.statusHistory?.[orderToSave.statusHistory.length - 1]?.status
+      const changed = orderToSave.trackingStatus !== statusValue && latestHistoryStatus !== statusValue
+      
+      console.log('Updating order:', orderToSave.id, { status: statusValue, delivery_status: deliveryValue })
+      
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: statusValue,
+          delivery_status: deliveryValue,
+          delivery_date: orderToSave.customer.date,
+          admin_note: orderToSave.adminNote || '',
+        })
+        .eq('id', orderToSave.id)
+
+      if (error) {
+        console.error('Update error:', error)
+        showToast('Failed to update order: ' + error.message)
+        return
+      }
+
+      orderToSave.trackingStatus = statusValue
+      if (changed) {
+        const recorded = await recordStatusHistory(orderToSave, statusValue)
+        if (recorded) {
+          orderToSave.statusHistory = [
+            ...(orderToSave.statusHistory || []),
+            {
+              id: `${Date.now()}`,
+              status: statusValue,
+              label: statusLabel(statusValue),
+              note: `Updated from admin: payment ${orderToSave.paymentStatus}, delivery ${orderToSave.deliveryStatus}.`,
+              createdAt: new Date().toISOString(),
+            },
+          ]
+        }
+      }
+
+      if (existingOrder) {
+        existingOrder.paymentStatus = orderToSave.paymentStatus
+        existingOrder.deliveryStatus = orderToSave.deliveryStatus
+        existingOrder.trackingStatus = statusValue
+        existingOrder.customer.date = orderToSave.customer.date
+        existingOrder.adminNote = orderToSave.adminNote || ''
+        existingOrder.statusHistory = orderToSave.statusHistory || existingOrder.statusHistory
+      }
+
+      showToast('Order updated!')
+    } finally {
+      savingOrderIds.delete(orderToSave.id)
+    }
+  }
+
+  async function recordStatusHistory(order: Order, status: string) {
+    if (order.statusHistory?.[order.statusHistory.length - 1]?.status === status) return false
+
+    const { error } = await supabase.rpc('record_order_status_history', {
+      p_order_id: order.id,
+      p_status: status,
+      p_label: statusLabel(status),
+      p_note: `Updated from admin: payment ${order.paymentStatus}, delivery ${order.deliveryStatus}.`,
+    })
 
     if (error) {
-      console.error('Update error:', error)
-      showToast('Failed to update order: ' + error.message)
-      return
+      console.warn('Status history was not recorded:', error)
+      return false
     }
-    
-    showToast('Order updated!')
+
+    return true
+  }
+
+  function statusLabel(status: string) {
+    const labels: Record<string, string> = {
+      pending: 'Order received',
+      confirmed: 'Payment confirmed',
+      preorder: 'Pre-order confirmed',
+      preparing: 'Preparing bouquet',
+      out_for_delivery: 'Out for delivery',
+      delivered: 'Delivered',
+      issue: 'Needs attention',
+      rejected: 'Payment issue',
+    }
+    return labels[status] || status.replace(/_/g, ' ')
   }
 
 
@@ -225,7 +339,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   function openOrder(o: Order) {
-    activeOrder.value = o
+    activeOrder.value = { ...o, customer: { ...o.customer }, items: [...o.items], statusHistory: [...(o.statusHistory || [])] }
   }
 
   function openMessage(m: Message) {
@@ -243,6 +357,29 @@ export const useAdminStore = defineStore('admin', () => {
 
   function viewProof(src: string) {
     lightboxSrc.value = src
+  }
+
+  async function approvePayment(order = activeOrder.value) {
+    if (!order) return
+    order.paymentStatus = 'Verified'
+    order.deliveryStatus = order.deliveryStatus === 'Cancelled' ? 'Processing' : order.deliveryStatus
+    await saveOrders(order)
+    showToast('Payment approved')
+  }
+
+  async function rejectPayment(order = activeOrder.value) {
+    if (!order) return
+    order.paymentStatus = 'Rejected'
+    await saveOrders(order)
+    showToast('Payment rejected')
+  }
+
+  async function requestClearerProof(order = activeOrder.value) {
+    if (!order) return
+    order.paymentStatus = 'Pending'
+    order.adminNote = `${order.adminNote || ''}${order.adminNote ? '\n' : ''}Needs clearer payment screenshot.`
+    await saveOrders(order)
+    showToast('Marked as needing clearer proof')
   }
 
   function isPreorder(order: Order) {
@@ -433,7 +570,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   return {
     // state
-    tab, orders, messages, lastRefresh, toast,
+    tab, orders, messages, products, lastRefresh, toast,
     orderSearch, orderPayFilter, orderDelFilter,
     msgSearch, msgReadFilter,
     txSearch, txPayFilter,
@@ -441,12 +578,13 @@ export const useAdminStore = defineStore('admin', () => {
     replyText, replyCopied,
     // computed
     tabLabel, pendingOrders, unreadMessages, preorderOrders,
-    totalRevenue, avgOrder,
+    totalRevenue, avgOrder, lowStockProducts, outOfStockProducts, bestSellingItems,
     filteredOrders, filteredMessages, filteredTx,
     // actions
     loadData, saveOrders, saveMessages, saveFromModal,
     openOrder, openMessage, toggleRead,
-    viewProof, copyReply, showToast, formatDate,
+    viewProof, approvePayment, rejectPayment, requestClearerProof,
+    copyReply, showToast, formatDate,
     isPreorder, orderReference, letterUrl, copyText,
     customerTrackUrl, orderEmailSubject, orderEmailBody,
     paymentBadgeClass, deliveryBadgeClass,

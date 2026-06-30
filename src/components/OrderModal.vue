@@ -66,6 +66,7 @@ const admin = useAdminStore()
           <img :src="item.image" :alt="item.name" />
           <span class="name">{{ item.name }}</span>
           <span class="qty preorder-item-pill" v-if="item.preOrder">Pre-order</span>
+          <span class="qty" v-if="item.preOrder">{{ item.prepDays ?? 5 }}d prep</span>
           <span class="qty" v-if="item.quantity && item.quantity > 1">x{{ item.quantity }}</span>
           <span class="price">{{ item.price }}</span>
         </div>
@@ -84,6 +85,21 @@ const admin = useAdminStore()
         alt="Proof"
         @click="admin.viewProof(admin.activeOrder.proofImage)"
       />
+      <div class="payment-review-actions">
+        <button class="mini-action-btn" @click="admin.approvePayment()">Approve Payment</button>
+        <button class="mini-action-btn" @click="admin.requestClearerProof()">Needs Clearer Proof</button>
+        <button class="mini-action-btn danger" @click="admin.rejectPayment()">Reject Payment</button>
+      </div>
+
+      <div class="detail-item full internal-note-box">
+        <label>Internal Admin Note</label>
+        <textarea
+          v-model="admin.activeOrder.adminNote"
+          class="detail-input"
+          rows="3"
+          placeholder="Private note for your team. Customers cannot see this."
+        ></textarea>
+      </div>
 
       <div class="detail-section-link" v-if="admin.activeOrder.letterId">
         <div>
@@ -141,6 +157,18 @@ const admin = useAdminStore()
             <option>Delivered</option>
             <option>Cancelled</option>
           </select>
+        </div>
+      </div>
+
+      <div v-if="admin.activeOrder.statusHistory?.length" class="admin-history">
+        <h3 class="section-mini-label">Order Timeline</h3>
+        <div v-for="item in admin.activeOrder.statusHistory" :key="item.id" class="admin-history-item">
+          <span></span>
+          <div>
+            <strong>{{ item.label }}</strong>
+            <p v-if="item.note">{{ item.note }}</p>
+            <small>{{ item.createdAt ? admin.formatDate(item.createdAt) : '' }}</small>
+          </div>
         </div>
       </div>
 
