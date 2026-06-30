@@ -13,6 +13,7 @@ const router = createRouter({
         { path: 'messages',     name: 'messages',     component: () => import('@/pages/MessagesPage.vue')     },
         { path: 'letters', name: 'letters', component: () => import('@/pages/LettersPage.vue') },
         { path: 'products', name: 'products', component: () => import('@/pages/ProductsPage.vue') },
+        { path: 'delivery-slots', name: 'delivery-slots', component: () => import('@/pages/DeliveryCapacityPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
       ],
     },

@@ -42,6 +42,9 @@ function logout() {
         <RouterLink to="/products" class="nav-item" active-class="active">
           <span class="icon">🌸</span> Products
         </RouterLink>
+        <RouterLink to="/delivery-slots" class="nav-item" active-class="active">
+          <span class="icon">📅</span> Delivery Slots
+        </RouterLink>
         <RouterLink to="/transactions" class="nav-item" active-class="active">
           <span class="icon">💳</span> Transactions
         </RouterLink>

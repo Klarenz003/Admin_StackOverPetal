@@ -42,6 +42,7 @@ export const useAdminStore = defineStore('admin', () => {
     overview: 'Overview', orders: 'Orders',
     messages: 'Messages', transactions: 'Transactions',
     products: 'Products', letters: 'Letters',
+    delivery: 'Delivery Slots',
   }[tab.value]))
 
   const pendingOrders = computed(() =>
