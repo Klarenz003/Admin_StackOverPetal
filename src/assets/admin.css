@@ -305,6 +305,61 @@ tr:hover td { background: #fdf9f8; }
   border-color: #5f8872;
 }
 
+.mini-action-btn.danger {
+  color: #842029;
+  border-color: #efb5bd;
+}
+
+.payment-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -8px 0 18px;
+}
+
+.internal-note-box {
+  margin-bottom: 18px;
+}
+
+.internal-note-box textarea {
+  resize: vertical;
+}
+
+.admin-history {
+  border: 1px solid #ede8e5;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 16px;
+  background: #faf8f7;
+}
+
+.admin-history-item {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.admin-history-item > span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #5f8872;
+  margin-top: 5px;
+}
+
+.admin-history-item strong {
+  font-size: 13px;
+}
+
+.admin-history-item p,
+.admin-history-item small {
+  display: block;
+  color: #777;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .status-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .status-row label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
 
@@ -575,6 +630,70 @@ tr:hover td { background: #fdf9f8; }
 .stock-out {
   background: #f8d7da;
   color: #842029;
+}
+
+.compact-stats .stat-card .value {
+  font-size: 24px;
+}
+
+.alert-list {
+  padding: 14px 20px;
+}
+
+.alert-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0ebe8;
+}
+
+.alert-row:last-child {
+  border-bottom: 0;
+}
+
+.delivery-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.delivery-day-card {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.delivery-day-card strong,
+.delivery-day-card span {
+  display: block;
+}
+
+.delivery-day-card span {
+  margin-top: 4px;
+  color: #777;
+  font-size: 12px;
+}
+
+.delivery-day-card.limited {
+  border-color: #e8c15d;
+  background: #fffaf0;
+}
+
+.delivery-day-card.full {
+  border-color: #efb5bd;
+  background: #fff5f6;
+}
+
+.delivery-day-card.selected {
+  border-color: #5f8872;
+  box-shadow: 0 0 0 2px rgba(95, 136, 114, 0.14);
 }
 
 .availability-cell {
