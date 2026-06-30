@@ -14,6 +14,7 @@ export interface OrderItem {
   price: string
   image: string
   quantity?: number
+  preOrder?: boolean
 }
 
 export type PaymentStatus  = 'Pending' | 'Verified' | 'Rejected'

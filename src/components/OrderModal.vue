@@ -65,6 +65,7 @@ const admin = useAdminStore()
         >
           <img :src="item.image" :alt="item.name" />
           <span class="name">{{ item.name }}</span>
+          <span class="qty preorder-item-pill" v-if="item.preOrder">Pre-order</span>
           <span class="qty" v-if="item.quantity && item.quantity > 1">x{{ item.quantity }}</span>
           <span class="price">{{ item.price }}</span>
         </div>
