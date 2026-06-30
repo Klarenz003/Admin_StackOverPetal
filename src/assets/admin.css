@@ -268,6 +268,27 @@ tr:hover td { background: #fdf9f8; }
   color: #555;
 }
 
+.email-template-card {
+  align-items: flex-start;
+  background: #fffdf8;
+}
+
+.email-template-actions {
+  flex: 0 0 auto !important;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.email-helper-note {
+  display: block;
+  margin-top: 6px;
+  color: #8a7b72;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .mini-action-btn {
   border: 1px solid #d7c9c5;
   background: #fff;
