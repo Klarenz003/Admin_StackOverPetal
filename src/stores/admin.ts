@@ -259,6 +259,90 @@ export const useAdminStore = defineStore('admin', () => {
     return `${baseUrl.replace(/\/$/, '')}/letter/${order.letterId}`
   }
 
+  function customerTrackUrl() {
+    const baseUrl = import.meta.env.VITE_CUSTOMER_SITE_URL || 'https://stackoverpetals.shop'
+    return `${baseUrl.replace(/\/$/, '')}/track`
+  }
+
+  function orderEmailSubject(order: Order) {
+    const ref = orderReference(order.id)
+
+    if (order.paymentStatus === 'Rejected') return `Stack Petals payment update - ${ref}`
+    if (order.deliveryStatus === 'Cancelled') return `Stack Petals order update - ${ref}`
+    if (order.deliveryStatus === 'Delivered') return `Stack Petals order delivered - ${ref}`
+    if (order.deliveryStatus === 'Shipped') return `Your Stack Petals delivery is on the way - ${ref}`
+    if (order.deliveryStatus === 'Packed') return `Your Stack Petals bouquet is preparing - ${ref}`
+    if (isPreorder(order)) return `Stack Petals pre-order confirmed - ${ref}`
+    if (order.paymentStatus === 'Verified') return `Stack Petals payment confirmed - ${ref}`
+
+    return `Stack Petals order received - ${ref}`
+  }
+
+  function orderEmailStatusLine(order: Order) {
+    if (order.paymentStatus === 'Rejected') {
+      return 'We reviewed your payment proof and need your help confirming the payment details.'
+    }
+
+    if (order.deliveryStatus === 'Cancelled') {
+      return 'We have an important update about your order. Please contact us so we can assist you right away.'
+    }
+
+    if (order.deliveryStatus === 'Delivered') {
+      return 'Your bouquet has been marked as delivered. Thank you for choosing Stack Petals.'
+    }
+
+    if (order.deliveryStatus === 'Shipped') {
+      return 'Your bouquet is now on the way to the delivery address.'
+    }
+
+    if (order.deliveryStatus === 'Packed') {
+      return 'Your bouquet is now being prepared for delivery.'
+    }
+
+    if (isPreorder(order)) {
+      return 'Your pre-order has been received. Pre-order bouquets usually need 3-5 days of preparation.'
+    }
+
+    if (order.paymentStatus === 'Verified') {
+      return 'Your payment has been confirmed and your order is now being processed.'
+    }
+
+    return 'We received your order and will review your payment proof shortly.'
+  }
+
+  function orderEmailBody(order: Order) {
+    const ref = orderReference(order.id)
+    const items = order.items
+      .map(item => {
+        const qty = item.quantity && item.quantity > 1 ? ` x${item.quantity}` : ''
+        const preorder = item.preOrder ? ' (pre-order)' : ''
+        return `- ${item.name}${qty}${preorder}`
+      })
+      .join('\n')
+
+    return [
+      `Hi ${order.customer.name || 'there'},`,
+      '',
+      orderEmailStatusLine(order),
+      '',
+      `Order ID: ${ref}`,
+      `Status: ${toTrackingStatus(order).replace(/_/g, ' ')}`,
+      `Delivery Date: ${order.customer.date || 'To be confirmed'}`,
+      `Total: ${order.total}`,
+      '',
+      'Items:',
+      items || '- Bouquet order',
+      '',
+      `You can track your order here: ${customerTrackUrl()}`,
+      `Use your Order ID and phone number: ${order.customer.phone || 'your checkout phone number'}`,
+      '',
+      'For concerns or changes, you can reply to this email or contact us through our website.',
+      '',
+      'Thank you,',
+      'Stack Petals',
+    ].join('\n')
+  }
+
   function copyText(value: string, label = 'Copied!') {
     if (!value) return
     navigator.clipboard.writeText(value).then(() => showToast(label))
@@ -364,6 +448,7 @@ export const useAdminStore = defineStore('admin', () => {
     openOrder, openMessage, toggleRead,
     viewProof, copyReply, showToast, formatDate,
     isPreorder, orderReference, letterUrl, copyText,
+    customerTrackUrl, orderEmailSubject, orderEmailBody,
     paymentBadgeClass, deliveryBadgeClass,
     orderTypeBadgeClass,
     startAutoRefresh, stopAutoRefresh,

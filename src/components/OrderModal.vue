@@ -98,6 +98,31 @@ const admin = useAdminStore()
         </a>
       </div>
 
+      <div class="detail-section-link email-template-card">
+        <div>
+          <label>Manual Customer Email</label>
+          <p>
+            To: {{ admin.activeOrder.customer.email }}<br>
+            Subject: {{ admin.orderEmailSubject(admin.activeOrder) }}
+          </p>
+          <small class="email-helper-note">Copy this into Gmail while automatic email sending is not ready yet.</small>
+        </div>
+        <div class="email-template-actions">
+          <button
+            class="mini-action-btn"
+            @click="admin.copyText(admin.orderEmailSubject(admin.activeOrder), 'Email subject copied')"
+          >
+            Copy Subject
+          </button>
+          <button
+            class="mini-action-btn"
+            @click="admin.copyText(admin.orderEmailBody(admin.activeOrder), 'Email template copied')"
+          >
+            Copy Email
+          </button>
+        </div>
+      </div>
+
       <div class="status-row">
         <div>
           <label>Payment Status</label>
