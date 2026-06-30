@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { supabase } from '@/supabaseClient'
 
 type DeliverySlot = {
@@ -14,6 +14,10 @@ type DeliverySlot = {
 const loading = ref(false)
 const saving = ref(false)
 const slots = ref<DeliverySlot[]>([])
+const selectedDate = ref('')
+const statusMessage = ref('')
+const formPanel = ref<HTMLElement | null>(null)
+const maxInput = ref<HTMLInputElement | null>(null)
 const form = ref({
   date: '',
   max: 5,
@@ -50,6 +54,7 @@ async function loadSlots() {
 async function saveCapacity() {
   if (!form.value.date) return
   saving.value = true
+  statusMessage.value = ''
   const { error } = await supabase.rpc('set_delivery_date_capacity', {
     p_delivery_date: form.value.date,
     p_max_deliveries: form.value.max,
@@ -61,12 +66,21 @@ async function saveCapacity() {
     return
   }
 
+  selectedDate.value = form.value.date
+  statusMessage.value = `Saved ${form.value.max} max deliveries for ${form.value.date}.`
   await loadSlots()
 }
 
-function useSlot(slot: DeliverySlot) {
+async function useSlot(slot: DeliverySlot) {
   form.value.date = slot.delivery_date
   form.value.max = slot.max_deliveries
+  selectedDate.value = slot.delivery_date
+  statusMessage.value = `Editing ${slot.delivery_date}. Change max deliveries, then save.`
+
+  await nextTick()
+  formPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  maxInput.value?.focus()
+  maxInput.value?.select()
 }
 
 onMounted(() => {
@@ -84,18 +98,19 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="capacity-form">
+    <div ref="formPanel" class="capacity-form" :class="{ editing: selectedDate === form.date }">
       <label>
         Delivery Date
         <input v-model="form.date" type="date" :min="minDate" />
       </label>
       <label>
         Max Deliveries
-        <input v-model.number="form.max" type="number" min="0" />
+        <input ref="maxInput" v-model.number="form.max" type="number" min="0" />
       </label>
       <button class="btn-primary capacity-save-btn" :disabled="saving || !form.date" @click="saveCapacity">
         {{ saving ? 'Saving...' : 'Save Capacity' }}
       </button>
+      <p v-if="statusMessage" class="capacity-status">{{ statusMessage }}</p>
     </div>
 
     <div class="products-table">
@@ -112,7 +127,7 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="slot in slots" :key="slot.delivery_date">
+          <tr v-for="slot in slots" :key="slot.delivery_date" :class="{ 'selected-slot-row': selectedDate === slot.delivery_date }">
             <td>{{ slot.delivery_date }}</td>
             <td>{{ slot.max_deliveries }}</td>
             <td>{{ slot.booked_deliveries }}</td>
@@ -123,7 +138,9 @@ onMounted(() => {
               </span>
             </td>
             <td>
-              <button class="btn-small" @click="useSlot(slot)">Edit</button>
+              <button class="btn-small" type="button" @click="useSlot(slot)">
+                {{ selectedDate === slot.delivery_date ? 'Editing' : 'Edit' }}
+              </button>
             </td>
           </tr>
           <tr v-if="slots.length === 0">

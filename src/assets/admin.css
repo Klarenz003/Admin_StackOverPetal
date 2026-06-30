@@ -464,6 +464,11 @@ tr:hover td { background: #fdf9f8; }
   align-items: end;
 }
 
+.capacity-form.editing {
+  border-color: #5f8872;
+  box-shadow: 0 10px 24px rgba(95, 136, 114, 0.12);
+}
+
 .capacity-form label {
   display: flex;
   flex-direction: column;
@@ -482,6 +487,17 @@ tr:hover td { background: #fdf9f8; }
 
 .capacity-save-btn {
   min-height: 40px;
+}
+
+.capacity-status {
+  grid-column: 1 / -1;
+  color: #5f8872;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.selected-slot-row td {
+  background: #f0f7f4 !important;
 }
 
 @media (max-width: 760px) {
