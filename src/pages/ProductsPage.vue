@@ -11,6 +11,9 @@ interface Product {
   badge: string | null
   stock: number
   featured: boolean
+  pre_order_allowed: boolean
+  prep_days: number
+  delivery_restrictions: string
 }
 
 const products = ref<Product[]>([])
@@ -26,6 +29,9 @@ const form = ref({
   badge: null as string | null,
   stock: 10,
   featured: false,
+  pre_order_allowed: true,
+  prep_days: 5,
+  delivery_restrictions: '',
 })
 
 async function loadProducts() {
@@ -52,6 +58,9 @@ const payload = {
   badge: form.value.badge || null,
   stock: form.value.stock,
   featured: form.value.featured,
+  pre_order_allowed: form.value.pre_order_allowed,
+  prep_days: Math.max(0, Number(form.value.prep_days || 0)),
+  delivery_restrictions: form.value.delivery_restrictions || '',
 }
 
   if (editingId.value) {
@@ -81,7 +90,12 @@ const payload = {
 
 function editProduct(product: Product) {
   editingId.value = product.id
-  form.value = { ...product }
+  form.value = {
+    ...product,
+    pre_order_allowed: product.pre_order_allowed ?? true,
+    prep_days: product.prep_days ?? 5,
+    delivery_restrictions: product.delivery_restrictions ?? '',
+  }
   showForm.value = true
 }
 
@@ -135,6 +149,9 @@ function resetForm() {
     badge: null,
     stock: 10,
     featured: false,
+    pre_order_allowed: true,
+    prep_days: 5,
+    delivery_restrictions: '',
   }
     showForm.value = false
 }
@@ -219,6 +236,20 @@ async function dragEnd() {
       </div>
       <div class="form-group checkbox">
         <label>
+          <input v-model="form.pre_order_allowed" type="checkbox" />
+          Allow pre-order when stock is 0
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Prep Days</label>
+        <input v-model.number="form.prep_days" type="number" min="0" placeholder="5" />
+      </div>
+      <div class="form-group">
+        <label>Delivery Restrictions</label>
+        <input v-model="form.delivery_restrictions" type="text" placeholder="Example: Metro Manila only" />
+      </div>
+      <div class="form-group checkbox">
+        <label>
           <input v-model="form.featured" type="checkbox" />
           Featured on homepage
         </label>
@@ -239,6 +270,7 @@ async function dragEnd() {
         <th>Category</th>
         <th>Price</th>
         <th>Stock</th>
+        <th>Availability</th>
         <th>Featured</th>
         <th>Actions</th>
       </tr>
@@ -264,6 +296,15 @@ async function dragEnd() {
             <strong>{{ product.stock }}</strong>
             <button class="stock-stepper" @click="adjustStock(product, 1)">+</button>
             <span :class="stockClass(product.stock)">{{ stockLabel(product.stock) }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="availability-cell">
+            <span :class="['stock-pill', product.pre_order_allowed ? 'stock-ok' : 'stock-out']">
+              {{ product.pre_order_allowed ? 'Pre-order allowed' : 'No pre-order' }}
+            </span>
+            <small>{{ product.prep_days ?? 5 }} day{{ (product.prep_days ?? 5) === 1 ? '' : 's' }} prep</small>
+            <small v-if="product.delivery_restrictions">{{ product.delivery_restrictions }}</small>
           </div>
         </td>
         <td>{{ product.featured ? '✓' : '—' }}</td>
