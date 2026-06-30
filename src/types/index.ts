@@ -13,6 +13,7 @@ export interface OrderItem {
   name: string
   price: string
   image: string
+  quantity?: number
 }
 
 export type PaymentStatus  = 'Pending' | 'Verified' | 'Rejected'
@@ -28,6 +29,9 @@ export interface Order {
   proofImage: string
   paymentStatus: PaymentStatus
   deliveryStatus: DeliveryStatus
+  trackingStatus: string
+  letterId?: string
+  letterPublished?: boolean
 }
 
 export interface Message {
@@ -40,4 +44,4 @@ export interface Message {
   read: boolean
 }
 
-export type AdminTab = 'overview' | 'orders' | 'messages' | 'transactions'
+export type AdminTab = 'overview' | 'orders' | 'messages' | 'transactions' | 'products' | 'letters'

@@ -16,7 +16,15 @@ const admin = useAdminStore()
       <div class="detail-grid">
         <div class="detail-item">
           <label>Order ID</label>
-          <p><code style="font-size:12px">{{ admin.activeOrder.id }}</code></p>
+          <p><code style="font-size:12px">{{ admin.orderReference(admin.activeOrder.id) }}</code></p>
+        </div>
+        <div class="detail-item">
+          <label>Order Type</label>
+          <p>
+            <span :class="admin.orderTypeBadgeClass(admin.activeOrder)">
+              {{ admin.isPreorder(admin.activeOrder) ? 'Pre-order' : 'Standard' }}
+            </span>
+          </p>
         </div>
         <div class="detail-item">
           <label>Date</label>
@@ -36,7 +44,7 @@ const admin = useAdminStore()
         </div>
         <div class="detail-item">
           <label>Delivery Date</label>
-          <p>{{ admin.activeOrder.customer.date }}</p>
+          <input class="detail-input" v-model="admin.activeOrder.customer.date" type="date" />
         </div>
         <div class="detail-item full">
           <label>Delivery Address</label>
@@ -57,6 +65,7 @@ const admin = useAdminStore()
         >
           <img :src="item.image" :alt="item.name" />
           <span class="name">{{ item.name }}</span>
+          <span class="qty" v-if="item.quantity && item.quantity > 1">x{{ item.quantity }}</span>
           <span class="price">{{ item.price }}</span>
         </div>
       </div>
@@ -72,7 +81,21 @@ const admin = useAdminStore()
         :src="admin.activeOrder.proofImage"
         class="proof-full"
         alt="Proof"
+        @click="admin.viewProof(admin.activeOrder.proofImage)"
       />
+
+      <div class="detail-section-link" v-if="admin.activeOrder.letterId">
+        <div>
+          <label>Letter Link</label>
+          <p>{{ admin.activeOrder.letterPublished ? 'Published' : 'Draft' }} letter attached to this order.</p>
+        </div>
+        <button class="mini-action-btn" @click="admin.copyText(admin.letterUrl(admin.activeOrder), 'Letter link copied')">
+          Copy Link
+        </button>
+        <a class="mini-action-btn" :href="admin.letterUrl(admin.activeOrder)" target="_blank" rel="noopener noreferrer">
+          Open
+        </a>
+      </div>
 
       <div class="status-row">
         <div>

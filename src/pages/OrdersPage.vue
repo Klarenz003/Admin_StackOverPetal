@@ -31,20 +31,25 @@ const admin = useAdminStore()
       <table>
         <thead>
           <tr>
-            <th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th>
-            <th>Via</th><th>Proof</th><th>Payment</th><th>Delivery</th><th>Date</th>
+            <th>Order ID</th><th>Customer</th><th>Items</th><th>Type</th><th>Total</th>
+            <th>Via</th><th>Proof</th><th>Payment</th><th>Delivery</th><th>Delivery Date</th><th>Date</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="o in admin.filteredOrders" :key="o.id">
             <td class="id-link" @click="admin.openOrder(o)">
-              <code class="id-code">{{ o.id }}</code>
+              <code class="id-code">{{ admin.orderReference(o.id) }}</code>
             </td>
             <td>
               <div class="name-primary">{{ o.customer.name }}</div>
               <div class="name-secondary">{{ o.customer.email }}</div>
             </td>
-            <td class="items-cell">{{ o.items.map(i => i.name).join(', ') }}</td>
+            <td class="items-cell">{{ o.items.map(i => `${i.name}${i.quantity && i.quantity > 1 ? ' x' + i.quantity : ''}`).join(', ') }}</td>
+            <td>
+              <span :class="admin.orderTypeBadgeClass(o)">
+                {{ admin.isPreorder(o) ? 'Pre-order' : 'Standard' }}
+              </span>
+            </td>
             <td class="total-cell">{{ o.total }}</td>
             <td>{{ o.paymentMethod }}</td>
             <td>
@@ -67,10 +72,11 @@ const admin = useAdminStore()
                 {{ o.deliveryStatus }}
               </span>
             </td>
+            <td class="date-cell">{{ o.customer.date }}</td>
             <td class="date-cell">{{ admin.formatDate(o.createdAt) }}</td>
           </tr>
           <tr v-if="admin.filteredOrders.length === 0">
-            <td colspan="9">
+            <td colspan="11">
               <div class="empty-state">
                 <div class="emoji">📦</div>
                 <p>No orders found.</p>

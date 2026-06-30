@@ -158,6 +158,8 @@ tr:hover td { background: #fdf9f8; }
 .badge-cancelled  { background: #f8d7da; color: #842029; }
 .badge-unread     { background: #fde8e8; color: #c0392b; }
 .badge-read       { background: #e8f5e9; color: #2e7d32; }
+.badge-preorder   { background: #fff0f4; color: #a23a5d; }
+.badge-standard   { background: #edf7f2; color: #28624a; }
 
 /* ── Status Select ── */
 .status-select {
@@ -203,6 +205,18 @@ tr:hover td { background: #fdf9f8; }
 .detail-item label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
 .detail-item p     { font-size: 14px; font-weight: 500; }
 .detail-item.full  { grid-column: 1 / -1; }
+.detail-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #e0dada;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.detail-input:focus {
+  outline: none;
+  border-color: #5f8872;
+}
 
 .section-mini-label { font-size: 14px; margin-bottom: 10px; color: #888; }
 
@@ -211,6 +225,14 @@ tr:hover td { background: #fdf9f8; }
 .order-item-row:last-child { border-bottom: none; }
 .order-item-row img   { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
 .order-item-row .name  { flex: 1; font-size: 13px; font-weight: 500; }
+.order-item-row .qty {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a4a36;
+  background: #fdf0ef;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
 .order-item-row .price { font-size: 13px; color: #5f8872; }
 
 .order-total-line { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
@@ -218,6 +240,49 @@ tr:hover td { background: #fdf9f8; }
 .payment-via      { font-size: 13px; font-weight: 400; color: #aaa; margin-left: 8px; }
 
 .proof-full { width: 100%; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ede8e5; }
+
+.detail-section-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #ede8e5;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+  background: #faf8f7;
+}
+
+.detail-section-link div {
+  flex: 1;
+}
+
+.detail-section-link label {
+  display: block;
+  color: #888;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.detail-section-link p {
+  font-size: 13px;
+  color: #555;
+}
+
+.mini-action-btn {
+  border: 1px solid #d7c9c5;
+  background: #fff;
+  color: #5f8872;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.mini-action-btn:hover {
+  border-color: #5f8872;
+}
 
 .status-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .status-row label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
@@ -375,6 +440,56 @@ tr:hover td { background: #fdf9f8; }
 
 .products-table tr[draggable="true"] {
   cursor: move;
+}
+
+.stock-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stock-control strong {
+  min-width: 24px;
+  text-align: center;
+}
+
+.stock-stepper {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.stock-stepper:hover {
+  border-color: #5f8872;
+  color: #5f8872;
+}
+
+.stock-pill {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.stock-ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.stock-low {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.stock-out {
+  background: #f8d7da;
+  color: #842029;
 }
 
 /* ── Scrollbar — blends into the modal ── */

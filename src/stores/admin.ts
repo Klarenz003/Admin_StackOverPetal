@@ -41,6 +41,7 @@ export const useAdminStore = defineStore('admin', () => {
   const tabLabel = computed(() => ({
     overview: 'Overview', orders: 'Orders',
     messages: 'Messages', transactions: 'Transactions',
+    products: 'Products', letters: 'Letters',
   }[tab.value]))
 
   const pendingOrders = computed(() =>
@@ -49,6 +50,10 @@ export const useAdminStore = defineStore('admin', () => {
 
   const unreadMessages = computed(() =>
     messages.value.filter(m => !m.read).length
+  )
+
+  const preorderOrders = computed(() =>
+    orders.value.filter(o => isPreorder(o)).length
   )
 
   const totalRevenue = computed(() => {
@@ -104,7 +109,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   // ── Actions ────────────────────────────────────────────────────
     async function loadData() {
-    const [{ data: ordersData }, { data: msgsData }] = await Promise.all([
+    const [{ data: ordersData }, { data: msgsData }, { data: lettersData }] = await Promise.all([
       supabase
         .from('orders')
         .select('*')
@@ -113,7 +118,14 @@ export const useAdminStore = defineStore('admin', () => {
         .from('messages')
         .select('*')
         .order('created_at', { ascending: false }),
+      supabase
+        .from('letters')
+        .select('id, order_id, published'),
     ])
+
+    const lettersByOrder = new Map(
+      (lettersData || []).map(letter => [letter.order_id, letter])
+    )
 
     orders.value = (ordersData || []).map(o => ({
       id:             o.id,
@@ -132,8 +144,11 @@ export const useAdminStore = defineStore('admin', () => {
       proofImage:     o.proof_url
         ? supabase.storage.from('proofs').getPublicUrl(o.proof_url).data.publicUrl
         : '',
-      paymentStatus:  capitalize(o.status) as any,
-      deliveryStatus: (o.delivery_status ? capitalize(o.delivery_status) : 'Processing') as any,
+      paymentStatus:  toPaymentStatus(o.status),
+      deliveryStatus: toDeliveryStatus(o.delivery_status),
+      trackingStatus: o.status || 'pending',
+      letterId:       lettersByOrder.get(o.id)?.id,
+      letterPublished: !!lettersByOrder.get(o.id)?.published,
     }))
 
     messages.value = (msgsData || []).map(m => ({
@@ -154,6 +169,7 @@ export const useAdminStore = defineStore('admin', () => {
   function toTrackingStatus(order: Order) {
     if (order.paymentStatus === 'Rejected') return 'rejected'
     if (order.paymentStatus === 'Pending') return 'pending'
+    if (isPreorder(order) && order.deliveryStatus === 'Processing') return 'preorder'
 
     const deliveryMap: Record<string, string> = {
       Processing: 'confirmed',
@@ -179,6 +195,7 @@ export const useAdminStore = defineStore('admin', () => {
       .update({
         status: statusValue,
         delivery_status: deliveryValue,
+        delivery_date: orderToSave.customer.date,
       })
       .eq('id', orderToSave.id)
 
@@ -227,6 +244,25 @@ export const useAdminStore = defineStore('admin', () => {
     lightboxSrc.value = src
   }
 
+  function isPreorder(order: Order) {
+    return ['preorder', 'pre_order'].includes(order.trackingStatus.toLowerCase())
+  }
+
+  function orderReference(id: string) {
+    return id.startsWith('SP-') ? id : `SP-${id}`
+  }
+
+  function letterUrl(order: Order) {
+    if (!order.letterId) return ''
+    const baseUrl = import.meta.env.VITE_CUSTOMER_SITE_URL || 'https://stackoverpetals.shop'
+    return `${baseUrl.replace(/\/$/, '')}/letter/${order.letterId}`
+  }
+
+  function copyText(value: string, label = 'Copied!') {
+    if (!value) return
+    navigator.clipboard.writeText(value).then(() => showToast(label))
+  }
+
   function copyReply() {
     if (!replyText.value) return
     navigator.clipboard.writeText(replyText.value).then(() => {
@@ -269,6 +305,14 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  function orderTypeBadgeClass(order: Order) {
+    return {
+      badge: true,
+      'badge-preorder': isPreorder(order),
+      'badge-standard': !isPreorder(order),
+    }
+  }
+
   function startAutoRefresh() {
     _refreshInterval = window.setInterval(() => loadData(), 30000)
   }
@@ -278,8 +322,28 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   // ── Helpers ────────────────────────────────────────────────────
-    function capitalize(s: string) {
+    function capitalize(s = '') {
       return s.charAt(0).toUpperCase() + s.slice(1)
+    }
+
+    function toPaymentStatus(status = '') {
+      const normalized = status.toLowerCase()
+      if (normalized === 'rejected') return 'Rejected'
+      if (normalized === 'pending') return 'Pending'
+      return 'Verified'
+    }
+
+    function toDeliveryStatus(status = '') {
+      const normalized = status.toLowerCase()
+      const labels: Record<string, Order['deliveryStatus']> = {
+        processing: 'Processing',
+        packed: 'Packed',
+        shipped: 'Shipped',
+        delivered: 'Delivered',
+        cancelled: 'Cancelled',
+        issue: 'Cancelled',
+      }
+      return labels[normalized] || 'Processing'
     }
 
   return {
@@ -291,14 +355,16 @@ export const useAdminStore = defineStore('admin', () => {
     activeOrder, activeMessage, lightboxSrc,
     replyText, replyCopied,
     // computed
-    tabLabel, pendingOrders, unreadMessages,
+    tabLabel, pendingOrders, unreadMessages, preorderOrders,
     totalRevenue, avgOrder,
     filteredOrders, filteredMessages, filteredTx,
     // actions
     loadData, saveOrders, saveMessages, saveFromModal,
     openOrder, openMessage, toggleRead,
     viewProof, copyReply, showToast, formatDate,
+    isPreorder, orderReference, letterUrl, copyText,
     paymentBadgeClass, deliveryBadgeClass,
+    orderTypeBadgeClass,
     startAutoRefresh, stopAutoRefresh,
   }
 })

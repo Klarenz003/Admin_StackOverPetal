@@ -53,7 +53,7 @@ const admin = useAdminStore()
           </thead>
           <tbody>
             <tr v-for="o in admin.filteredTx" :key="o.id">
-              <td><code class="id-code">{{ o.id }}</code></td>
+              <td><code class="id-code">{{ admin.orderReference(o.id) }}</code></td>
               <td>
                 <div class="name-primary">{{ o.customer.name }}</div>
                 <div class="name-secondary">{{ o.customer.email }}</div>

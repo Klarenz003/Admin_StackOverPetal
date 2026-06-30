@@ -95,6 +95,36 @@ async function deleteProduct(id: string) {
   loadProducts()
 }
 
+async function adjustStock(product: Product, delta: number) {
+  const nextStock = Math.max(0, Number(product.stock || 0) + delta)
+  const { error } = await supabase
+    .from('products')
+    .update({ stock: nextStock })
+    .eq('id', product.id)
+
+  if (error) {
+    alert('Error updating stock')
+    return
+  }
+
+  product.stock = nextStock
+}
+
+function stockLabel(stock: number) {
+  if (stock <= 0) return 'Out'
+  if (stock <= 3) return 'Low'
+  return 'In stock'
+}
+
+function stockClass(stock: number) {
+  return {
+    'stock-pill': true,
+    'stock-out': stock <= 0,
+    'stock-low': stock > 0 && stock <= 3,
+    'stock-ok': stock > 3,
+  }
+}
+
 function resetForm() {
   editingId.value = null
   form.value = {
@@ -228,7 +258,14 @@ async function dragEnd() {
         <td><strong>{{ product.name }}</strong></td>
         <td>{{ product.category }}</td>
         <td>₱{{ product.price.toLocaleString() }}</td>
-        <td>{{ product.stock }}</td>
+        <td>
+          <div class="stock-control">
+            <button class="stock-stepper" @click="adjustStock(product, -1)">-</button>
+            <strong>{{ product.stock }}</strong>
+            <button class="stock-stepper" @click="adjustStock(product, 1)">+</button>
+            <span :class="stockClass(product.stock)">{{ stockLabel(product.stock) }}</span>
+          </div>
+        </td>
         <td>{{ product.featured ? '✓' : '—' }}</td>
         <td>
           <button class="btn-small" @click="editProduct(product)">Edit</button>
