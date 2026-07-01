@@ -63,7 +63,11 @@ const admin = useAdminStore()
           v-for="item in admin.activeOrder.items"
           :key="item.name"
         >
-          <img :src="item.image" :alt="item.name" />
+          <img
+            :src="item.image"
+            :alt="item.name"
+            @error="($event.target as HTMLImageElement).src = admin.normalizeOrderItemImage()"
+          />
           <span class="name">{{ item.name }}</span>
           <span class="qty preorder-item-pill" v-if="item.preOrder">Pre-order</span>
           <span class="qty" v-if="item.preOrder">{{ item.prepDays ?? 5 }}d prep</span>

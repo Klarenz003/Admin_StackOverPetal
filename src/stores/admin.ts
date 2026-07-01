@@ -175,7 +175,7 @@ export const useAdminStore = defineStore('admin', () => {
         date:    o.delivery_date,
         note:    o.note,
       },
-      items:          o.items,
+      items:          normalizeOrderItems(o.items),
       total:          o.total,
       paymentMethod:  o.payment_method,
       proofImage:     o.proof_url
@@ -390,15 +390,30 @@ export const useAdminStore = defineStore('admin', () => {
     return id.startsWith('SP-') ? id : `SP-${id}`
   }
 
+  function customerSiteBaseUrl() {
+    return (import.meta.env.VITE_CUSTOMER_SITE_URL || 'https://stackoverpetals.shop').replace(/\/$/, '')
+  }
+
+  function normalizeOrderItems(items: any[] = []) {
+    return items.map(item => ({
+      ...item,
+      image: normalizeOrderItemImage(item?.image),
+    }))
+  }
+
+  function normalizeOrderItemImage(src = '') {
+    if (/^(https?:|data:|blob:)/.test(src)) return src
+    const path = src ? src.replace(/^\/?/, '/') : '/images/b5.png'
+    return `${customerSiteBaseUrl()}${path}`
+  }
+
   function letterUrl(order: Order) {
     if (!order.letterId) return ''
-    const baseUrl = import.meta.env.VITE_CUSTOMER_SITE_URL || 'https://stackoverpetals.shop'
-    return `${baseUrl.replace(/\/$/, '')}/letter/${order.letterId}`
+    return `${customerSiteBaseUrl()}/letter/${order.letterId}`
   }
 
   function customerTrackUrl() {
-    const baseUrl = import.meta.env.VITE_CUSTOMER_SITE_URL || 'https://stackoverpetals.shop'
-    return `${baseUrl.replace(/\/$/, '')}/track`
+    return `${customerSiteBaseUrl()}/track`
   }
 
   function orderEmailSubject(order: Order) {
@@ -587,6 +602,7 @@ export const useAdminStore = defineStore('admin', () => {
     copyReply, showToast, formatDate,
     isPreorder, orderReference, letterUrl, copyText,
     customerTrackUrl, orderEmailSubject, orderEmailBody,
+    normalizeOrderItemImage,
     paymentBadgeClass, deliveryBadgeClass,
     orderTypeBadgeClass,
     startAutoRefresh, stopAutoRefresh,

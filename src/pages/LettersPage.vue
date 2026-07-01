@@ -21,6 +21,7 @@ const loading = ref(false)
 const activeLetter = ref<Letter | null>(null)
 const uploading = ref(false)
 const publishing = ref(false)
+const removingAnglePhotos = ref(false)
 const qrUrl = ref('')
 const showQR = ref(false)
 
@@ -103,6 +104,29 @@ async function removeAnglePhoto(index: number) {
     .from('letters')
     .update({ angle_photos: activeLetter.value.angle_photos })
     .eq('id', activeLetter.value.id)
+  loadLetters()
+}
+
+async function removeAllAnglePhotos() {
+  if (!activeLetter.value || activeLetter.value.angle_photos.length === 0) return
+  const confirmed = window.confirm('Remove all 360 bouquet photos from this letter?')
+  if (!confirmed) return
+
+  removingAnglePhotos.value = true
+
+  const { error } = await supabase
+    .from('letters')
+    .update({ angle_photos: [] })
+    .eq('id', activeLetter.value.id)
+
+  if (error) {
+    alert('Failed to remove 360 photos')
+    removingAnglePhotos.value = false
+    return
+  }
+
+  activeLetter.value.angle_photos = []
+  removingAnglePhotos.value = false
   loadLetters()
 }
 
@@ -250,6 +274,15 @@ onMounted(() => loadLetters())
         <div class="section-title-row">
           <h3>360° Bouquet Photos</h3>
           <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} frames</span>
+          <button
+            v-if="activeLetter.angle_photos?.length > 0"
+            class="clear-angle-btn"
+            type="button"
+            :disabled="removingAnglePhotos"
+            @click="removeAllAnglePhotos"
+          >
+            {{ removingAnglePhotos ? 'Removing...' : 'Remove All' }}
+          </button>
         </div>
         <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front → right → back → left → front). More frames = smoother rotation.</p>
 

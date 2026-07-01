@@ -981,6 +981,26 @@ tr:hover td { background: #fdf9f8; }
   border-radius: 20px;
 }
 
+.clear-angle-btn {
+  border: 1px solid #efb5bd;
+  background: #fff5f6;
+  color: #842029;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.clear-angle-btn:hover:not(:disabled) {
+  background: #f8d7da;
+}
+
+.clear-angle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .section-hint {
   font-size: 13px;
   color: #999;
