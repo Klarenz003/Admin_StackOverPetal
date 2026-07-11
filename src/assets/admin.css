@@ -741,6 +741,7 @@ tr:hover td { background: #fdf9f8; }
 .letters-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -748,11 +749,20 @@ tr:hover td { background: #fdf9f8; }
 .letters-header h2 { margin: 0; }
 
 .letters-count {
+  display: inline-block;
+  margin-top: 6px;
   font-size: 13px;
   color: #999;
   background: #f5f5f5;
   padding: 4px 12px;
   border-radius: 20px;
+}
+
+.letters-create-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 10px 18px;
+  flex-shrink: 0;
 }
 
 .letters-list {
@@ -955,6 +965,15 @@ tr:hover td { background: #fdf9f8; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  margin-bottom: 16px;
+}
+
+.memory-admin-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  background: #f9f9f9;
 }
 
 .memory-thumb {
@@ -962,6 +981,43 @@ tr:hover td { background: #fdf9f8; }
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.letter-music-preview {
+  border: 1px solid #ede8e5;
+  border-radius: 10px;
+  background: #faf8f7;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.letter-music-preview audio {
+  width: 100%;
+}
+
+.letter-music-preview p {
+  margin: 8px 0 0;
+  color: #999;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.letter-bouquet-preview {
+  border: 1px solid #ede8e5;
+  border-radius: 10px;
+  background: #faf8f7;
+  padding: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.letter-bouquet-preview img {
+  width: min(100%, 320px);
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #eee;
 }
 
 .section-title-row {

@@ -4,13 +4,15 @@ import { supabase } from '@/supabaseClient'
 
 interface Letter {
   id: string
-  order_id: string
+  order_id: string | null
   recipient: string
   sender: string
   message: string
   petal_messages: string[]
   memories: string[]
   angle_photos: string[]
+  music_url: string
+  bouquet_image_url: string
   published: boolean
   template: string
   created_at: string
@@ -19,11 +21,34 @@ interface Letter {
 const letters = ref<Letter[]>([])
 const loading = ref(false)
 const activeLetter = ref<Letter | null>(null)
+const creatingLetter = ref(false)
 const uploading = ref(false)
+const uploadingMemories = ref(false)
+const uploadingMusic = ref(false)
+const uploadingBouquetImage = ref(false)
 const publishing = ref(false)
 const removingAnglePhotos = ref(false)
 const qrUrl = ref('')
 const showQR = ref(false)
+const PETAL_MESSAGE_LIMIT = 30
+const PETAL_COUNT = 6
+
+function normalizePetalMessages(messages?: string[]) {
+  const petals = Array.isArray(messages) ? [...messages] : []
+  while (petals.length < PETAL_COUNT) petals.push('')
+  return petals.slice(0, PETAL_COUNT).map(message => (message || '').slice(0, PETAL_MESSAGE_LIMIT))
+}
+
+function normalizeLetter(letter: Letter): Letter {
+  return {
+    ...letter,
+    petal_messages: normalizePetalMessages(letter.petal_messages),
+    memories: Array.isArray(letter.memories) ? [...letter.memories] : [],
+    angle_photos: Array.isArray(letter.angle_photos) ? [...letter.angle_photos] : [],
+    music_url: letter.music_url || '',
+    bouquet_image_url: letter.bouquet_image_url || '',
+  }
+}
 
 // ── Load Letters ───────────────────────────────────────────────────
 async function loadLetters() {
@@ -39,14 +64,54 @@ async function loadLetters() {
 
 // ── Open Letter ────────────────────────────────────────────────────
 function openLetter(letter: Letter) {
-  activeLetter.value = { ...letter }
+  activeLetter.value = normalizeLetter(letter)
   qrUrl.value = ''
   showQR.value = false
+}
+
+async function createStandaloneLetter() {
+  if (creatingLetter.value) return
+  creatingLetter.value = true
+
+  const { data, error } = await supabase
+    .from('letters')
+    .insert({
+      order_id: null,
+      recipient: 'Recipient Name',
+      sender: 'Stack Petals',
+      message: 'Write your custom letter message here.',
+      petal_messages: normalizePetalMessages([]),
+      memories: [],
+      angle_photos: [],
+      music_url: '',
+      bouquet_image_url: '',
+      published: false,
+      template: 'default',
+    })
+    .select('*')
+    .single()
+
+  creatingLetter.value = false
+
+  if (error || !data) {
+    console.error(error)
+    alert('Failed to create letter')
+    return
+  }
+
+  await loadLetters()
+  openLetter(data)
+}
+
+function limitPetalMessage(index: number) {
+  if (!activeLetter.value) return
+  activeLetter.value.petal_messages[index] = activeLetter.value.petal_messages[index].slice(0, PETAL_MESSAGE_LIMIT)
 }
 
 // ── Save Edits ─────────────────────────────────────────────────────
 async function saveLetter() {
   if (!activeLetter.value) return
+  activeLetter.value.petal_messages = normalizePetalMessages(activeLetter.value.petal_messages)
   const { error } = await supabase
     .from('letters')
     .update({
@@ -54,6 +119,10 @@ async function saveLetter() {
       sender:         activeLetter.value.sender,
       message:        activeLetter.value.message,
       petal_messages: activeLetter.value.petal_messages,
+      memories:       activeLetter.value.memories,
+      angle_photos:   activeLetter.value.angle_photos,
+      music_url:      activeLetter.value.music_url || '',
+      bouquet_image_url: activeLetter.value.bouquet_image_url || '',
     })
     .eq('id', activeLetter.value.id)
   if (error) { alert('Failed to save'); return }
@@ -130,6 +199,202 @@ async function removeAllAnglePhotos() {
   loadLetters()
 }
 
+// ── Memory Photos ──────────────────────────────────────────────────
+async function uploadMemoryPhotos(e: Event) {
+  if (!activeLetter.value) return
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+
+  uploadingMemories.value = true
+  const uploaded: string[] = [...activeLetter.value.memories]
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const extension = file.name.split('.').pop() || 'jpg'
+    const fileName = `${activeLetter.value.id}/memory-${Date.now()}-${i}.${extension}`
+    const { data, error } = await supabase.storage
+      .from('letter-photos')
+      .upload(fileName, file, { upsert: true })
+    if (error) {
+      console.error(error)
+      continue
+    }
+    const { data: urlData } = supabase.storage
+      .from('letter-photos')
+      .getPublicUrl(data.path)
+    uploaded.push(urlData.publicUrl)
+  }
+
+  const { error } = await supabase
+    .from('letters')
+    .update({ memories: uploaded })
+    .eq('id', activeLetter.value.id)
+
+  if (error) {
+    alert('Failed to upload memory photos')
+  } else {
+    activeLetter.value.memories = uploaded
+    loadLetters()
+  }
+
+  input.value = ''
+  uploadingMemories.value = false
+}
+
+async function removeMemoryPhoto(index: number) {
+  if (!activeLetter.value) return
+  activeLetter.value.memories.splice(index, 1)
+  const { error } = await supabase
+    .from('letters')
+    .update({ memories: activeLetter.value.memories })
+    .eq('id', activeLetter.value.id)
+
+  if (error) alert('Failed to remove memory photo')
+  loadLetters()
+}
+
+async function removeAllMemoryPhotos() {
+  if (!activeLetter.value || activeLetter.value.memories.length === 0) return
+  const confirmed = window.confirm('Remove all memory photos from this letter?')
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('letters')
+    .update({ memories: [] })
+    .eq('id', activeLetter.value.id)
+
+  if (error) {
+    alert('Failed to remove memory photos')
+    return
+  }
+
+  activeLetter.value.memories = []
+  loadLetters()
+}
+
+// ── Background Music ────────────────────────────────────────────────
+async function uploadLetterMusic(e: Event) {
+  if (!activeLetter.value) return
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploadingMusic.value = true
+  const extension = file.name.split('.').pop() || 'mp3'
+  const fileName = `${activeLetter.value.id}/music-${Date.now()}.${extension}`
+  const { data, error } = await supabase.storage
+    .from('letter-music')
+    .upload(fileName, file, { upsert: true })
+
+  if (error) {
+    console.error(error)
+    alert('Failed to upload music')
+    uploadingMusic.value = false
+    input.value = ''
+    return
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('letter-music')
+    .getPublicUrl(data.path)
+
+  const { error: updateError } = await supabase
+    .from('letters')
+    .update({ music_url: urlData.publicUrl })
+    .eq('id', activeLetter.value.id)
+
+  if (updateError) {
+    alert('Music uploaded, but failed to attach to letter')
+  } else {
+    activeLetter.value.music_url = urlData.publicUrl
+    loadLetters()
+  }
+
+  input.value = ''
+  uploadingMusic.value = false
+}
+
+async function removeLetterMusic() {
+  if (!activeLetter.value || !activeLetter.value.music_url) return
+  const confirmed = window.confirm('Remove custom background music from this letter?')
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('letters')
+    .update({ music_url: '' })
+    .eq('id', activeLetter.value.id)
+
+  if (error) {
+    alert('Failed to remove music')
+    return
+  }
+
+  activeLetter.value.music_url = ''
+  loadLetters()
+}
+
+// ── Page 6 Bouquet Image ────────────────────────────────────────────
+async function uploadBouquetImage(e: Event) {
+  if (!activeLetter.value) return
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploadingBouquetImage.value = true
+  const extension = file.name.split('.').pop() || 'jpg'
+  const fileName = `${activeLetter.value.id}/bouquet-${Date.now()}.${extension}`
+  const { data, error } = await supabase.storage
+    .from('letter-bouquets')
+    .upload(fileName, file, { upsert: true })
+
+  if (error) {
+    console.error(error)
+    alert('Failed to upload bouquet image')
+    uploadingBouquetImage.value = false
+    input.value = ''
+    return
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('letter-bouquets')
+    .getPublicUrl(data.path)
+
+  const { error: updateError } = await supabase
+    .from('letters')
+    .update({ bouquet_image_url: urlData.publicUrl })
+    .eq('id', activeLetter.value.id)
+
+  if (updateError) {
+    alert('Bouquet image uploaded, but failed to attach to letter')
+  } else {
+    activeLetter.value.bouquet_image_url = urlData.publicUrl
+    loadLetters()
+  }
+
+  input.value = ''
+  uploadingBouquetImage.value = false
+}
+
+async function removeBouquetImage() {
+  if (!activeLetter.value || !activeLetter.value.bouquet_image_url) return
+  const confirmed = window.confirm('Remove custom page 6 bouquet image from this letter?')
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('letters')
+    .update({ bouquet_image_url: '' })
+    .eq('id', activeLetter.value.id)
+
+  if (error) {
+    alert('Failed to remove bouquet image')
+    return
+  }
+
+  activeLetter.value.bouquet_image_url = ''
+  loadLetters()
+}
+
 // ── Publish & Generate QR ──────────────────────────────────────────
 async function publishLetter() {
   if (!activeLetter.value) return
@@ -173,8 +438,13 @@ onMounted(() => loadLetters())
     <!-- List View -->
     <div v-if="!activeLetter">
       <div class="letters-header">
-        <h2>Love Letters</h2>
-        <span class="letters-count">{{ letters.length }} total</span>
+        <div>
+          <h2>Love Letters</h2>
+          <span class="letters-count">{{ letters.length }} total</span>
+        </div>
+        <button class="btn-save letters-create-btn" type="button" :disabled="creatingLetter" @click="createStandaloneLetter">
+          {{ creatingLetter ? 'Creating...' : '+ New Letter' }}
+        </button>
       </div>
 
       <div v-if="loading" class="loading">Loading letters...</div>
@@ -196,7 +466,8 @@ onMounted(() => loadLetters())
             <div>
               <p class="letter-recipient">To: <strong>{{ letter.recipient }}</strong></p>
               <p class="letter-sender">From: <strong>{{ letter.sender }}</strong></p>
-              <p class="letter-order">Order: <code>{{ letter.order_id?.slice(0, 8) }}...</code></p>
+              <p class="letter-order" v-if="letter.order_id">Order: <code>{{ letter.order_id.slice(0, 8) }}...</code></p>
+              <p class="letter-order" v-else>Standalone letter</p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>
             </div>
           </div>
@@ -220,7 +491,12 @@ onMounted(() => loadLetters())
           <p class="detail-order-id">
             From: <strong>{{ activeLetter.sender }}</strong>
             &nbsp;·&nbsp;
-            Order: <code>{{ activeLetter.order_id }}</code>
+            <template v-if="activeLetter.order_id">
+              Order: <code>{{ activeLetter.order_id }}</code>
+            </template>
+            <template v-else>
+              Standalone admin letter
+            </template>
           </p>
         </div>
         <span :class="activeLetter.published ? 'badge-published' : 'badge-draft'">
@@ -248,7 +524,12 @@ onMounted(() => loadLetters())
           <div class="petals-edit">
             <div v-for="(_, i) in activeLetter.petal_messages" :key="i" class="petal-edit-row">
               <span class="petal-num">{{ i + 1 }}</span>
-              <input v-model="activeLetter.petal_messages[i]" :placeholder="`Petal ${i + 1}...`" />
+              <input
+                v-model="activeLetter.petal_messages[i]"
+                :placeholder="`Petal ${i + 1}...`"
+                :maxlength="PETAL_MESSAGE_LIMIT"
+                @input="limitPetalMessage(i)"
+              />
             </div>
           </div>
         </div>
@@ -256,16 +537,114 @@ onMounted(() => loadLetters())
       </div>
 
       <!-- Memory Photos -->
-      <div class="detail-section" v-if="activeLetter.memories?.length > 0">
-        <h3>Customer Memory Photos</h3>
-        <div class="memory-preview-grid">
-          <img
+      <div class="detail-section">
+        <div class="section-title-row">
+          <h3>Memory Photos</h3>
+          <span class="photo-count">{{ activeLetter.memories?.length || 0 }} photos</span>
+          <button
+            v-if="activeLetter.memories?.length > 0"
+            class="clear-angle-btn"
+            type="button"
+            @click="removeAllMemoryPhotos"
+          >
+            Remove All
+          </button>
+        </div>
+        <p class="section-hint">Customize the customer memories shown on the letter page. You can add, remove, or replace photos here.</p>
+
+        <div v-if="activeLetter.memories?.length > 0" class="memory-preview-grid">
+          <div
             v-for="(mem, i) in activeLetter.memories"
             :key="i"
-            :src="mem"
-            :alt="`Memory ${i + 1}`"
-            class="memory-thumb"
+            class="memory-admin-item"
+          >
+            <img
+              :src="mem"
+              :alt="`Memory ${i + 1}`"
+              class="memory-thumb"
+            />
+            <button class="remove-angle" @click="removeMemoryPhoto(i)">✕</button>
+          </div>
+        </div>
+
+        <div class="upload-angle-zone" @click="($refs.memoryInput as HTMLInputElement).click()">
+          <input
+            ref="memoryInput"
+            type="file"
+            accept="image/*"
+            multiple
+            style="display:none"
+            @change="uploadMemoryPhotos"
           />
+          <span v-if="uploadingMemories">Uploading...</span>
+          <span v-else>+ Upload Memory Photos</span>
+        </div>
+      </div>
+
+      <!-- Background Music -->
+      <div class="detail-section">
+        <div class="section-title-row">
+          <h3>Background Music</h3>
+          <span class="photo-count">{{ activeLetter.music_url ? 'Custom' : 'Default' }}</span>
+          <button
+            v-if="activeLetter.music_url"
+            class="clear-angle-btn"
+            type="button"
+            @click="removeLetterMusic"
+          >
+            Remove
+          </button>
+        </div>
+        <p class="section-hint">Upload an MP3, WAV, M4A, or OGG file. The letter page will use this music when the recipient taps the music button. If empty, it uses the default song.</p>
+
+        <div v-if="activeLetter.music_url" class="letter-music-preview">
+          <audio :src="activeLetter.music_url" controls></audio>
+          <p>{{ activeLetter.music_url }}</p>
+        </div>
+
+        <div class="upload-angle-zone" @click="($refs.musicInput as HTMLInputElement).click()">
+          <input
+            ref="musicInput"
+            type="file"
+            accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/ogg"
+            style="display:none"
+            @change="uploadLetterMusic"
+          />
+          <span v-if="uploadingMusic">Uploading...</span>
+          <span v-else>{{ activeLetter.music_url ? 'Replace Background Music' : '+ Upload Background Music' }}</span>
+        </div>
+      </div>
+
+      <!-- Page 6 Bouquet Image -->
+      <div class="detail-section">
+        <div class="section-title-row">
+          <h3>Page 6 Bouquet Picture</h3>
+          <span class="photo-count">{{ activeLetter.bouquet_image_url ? 'Custom' : 'Order image' }}</span>
+          <button
+            v-if="activeLetter.bouquet_image_url"
+            class="clear-angle-btn"
+            type="button"
+            @click="removeBouquetImage"
+          >
+            Remove
+          </button>
+        </div>
+        <p class="section-hint">This controls the bouquet picture shown on page 6 of the letter. If empty, the customer order bouquet image is used.</p>
+
+        <div v-if="activeLetter.bouquet_image_url" class="letter-bouquet-preview">
+          <img :src="activeLetter.bouquet_image_url" alt="Custom page 6 bouquet" />
+        </div>
+
+        <div class="upload-angle-zone" @click="($refs.bouquetImageInput as HTMLInputElement).click()">
+          <input
+            ref="bouquetImageInput"
+            type="file"
+            accept="image/*"
+            style="display:none"
+            @change="uploadBouquetImage"
+          />
+          <span v-if="uploadingBouquetImage">Uploading...</span>
+          <span v-else>{{ activeLetter.bouquet_image_url ? 'Replace Bouquet Picture' : '+ Upload Bouquet Picture' }}</span>
         </div>
       </div>
 
