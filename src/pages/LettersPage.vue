@@ -596,7 +596,7 @@ onMounted(() => loadLetters())
             <span :class="letter.published ? 'badge-published' : 'badge-draft'">
               {{ letter.published ? 'Published' : 'Draft' }}
             </span>
-            <p class="letter-photos">{{ letter.angle_photos?.length || 0 }} / 24 photos</p>
+            <p class="letter-photos">{{ letter.angle_photos?.length || 0 }} photos</p>
           </div>
         </div>
       </div>
