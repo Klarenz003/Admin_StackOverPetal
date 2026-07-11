@@ -30,6 +30,7 @@ const publishing = ref(false)
 const removingAnglePhotos = ref(false)
 const qrUrl = ref('')
 const showQR = ref(false)
+const QR_LOGO_SRC = '/images/qrlogo.png'
 const PETAL_MESSAGE_LIMIT = 30
 const PETAL_COUNT = 6
 
@@ -413,13 +414,133 @@ async function publishLetter() {
   if (error) { alert('Failed to publish'); publishing.value = false; return }
 
   activeLetter.value.published = true
-  const letterUrl = `https://stackoverpetals.shop/letter/${activeLetter.value.id}`
-  qrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(letterUrl)}`
-  showQR.value = true
+  showQRCode()
   publishing.value = false
   loadLetters()
 }
 
+function getLetterUrl(letterId: string) {
+  return `https://stackoverpetals.shop/letter/${letterId}`
+}
+
+function getStyledQrUrl(letterId: string) {
+  const params = new URLSearchParams({
+    size: '720x720',
+    data: getLetterUrl(letterId),
+    color: '7A4A64',
+    bgcolor: 'FFF7F8',
+    qzone: '2',
+    ecc: 'H',
+    format: 'png',
+  })
+  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`
+}
+
+function showQRCode() {
+  if (!activeLetter.value) return
+  qrUrl.value = getStyledQrUrl(activeLetter.value.id)
+  showQR.value = true
+}
+
+function loadCanvasImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.arcTo(x + width, y, x + width, y + height, radius)
+  ctx.arcTo(x + width, y + height, x, y + height, radius)
+  ctx.arcTo(x, y + height, x, y, radius)
+  ctx.arcTo(x, y, x + width, y, radius)
+  ctx.closePath()
+}
+
+function drawQrDecorations(ctx: CanvasRenderingContext2D) {
+  ctx.strokeStyle = '#F0B7C1'
+  ctx.fillStyle = '#F0B7C1'
+  ctx.lineWidth = 8
+  ctx.globalAlpha = 0.9
+  drawRoundRect(ctx, 52, 52, 1096, 1096, 88)
+  ctx.stroke()
+  ctx.lineWidth = 3
+  drawRoundRect(ctx, 70, 70, 1060, 1060, 72)
+  ctx.stroke()
+
+  ctx.globalAlpha = 0.75
+  ;[
+    [126, 142, 18], [104, 182, 10], [1084, 1018, 18], [1046, 1068, 6], [112, 510, 8],
+  ].forEach(([x, y, size]) => {
+    ctx.beginPath()
+    ctx.moveTo(x, y - size)
+    ctx.lineTo(x + size * 0.3, y - size * 0.3)
+    ctx.lineTo(x + size, y)
+    ctx.lineTo(x + size * 0.3, y + size * 0.3)
+    ctx.lineTo(x, y + size)
+    ctx.lineTo(x - size * 0.3, y + size * 0.3)
+    ctx.lineTo(x - size, y)
+    ctx.lineTo(x - size * 0.3, y - size * 0.3)
+    ctx.closePath()
+    ctx.fill()
+  })
+  ctx.globalAlpha = 1
+}
+
+async function downloadStyledQR() {
+  if (!activeLetter.value || !qrUrl.value) return
+
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1200
+    canvas.height = 1200
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const qrImage = await loadCanvasImage(qrUrl.value)
+    const logoImage = await loadCanvasImage(QR_LOGO_SRC)
+
+    const bg = ctx.createRadialGradient(600, 560, 80, 600, 600, 760)
+    bg.addColorStop(0, '#FFF9F9')
+    bg.addColorStop(1, '#FFF0F2')
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, 1200, 1200)
+    drawQrDecorations(ctx)
+
+    ctx.drawImage(qrImage, 170, 170, 860, 860)
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.fillStyle = '#FFF0F2'
+    ctx.shadowColor = 'rgba(122, 74, 100, 0.18)'
+    ctx.shadowBlur = 18
+    ctx.fill()
+    ctx.clip()
+    ctx.shadowBlur = 0
+    ctx.drawImage(logoImage, 488, 488, 224, 224)
+    ctx.restore()
+
+    ctx.beginPath()
+    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.lineWidth = 10
+    ctx.strokeStyle = '#FFF7F8'
+    ctx.stroke()
+
+    const link = document.createElement('a')
+    link.href = canvas.toDataURL('image/png')
+    link.download = `stack-petals-letter-${activeLetter.value.id}-qr.png`
+    link.click()
+  } catch (error) {
+    console.error('Failed to download styled QR:', error)
+    window.open(qrUrl.value, '_blank', 'noopener,noreferrer')
+  }
+}
 // ── Unpublish ──────────────────────────────────────────────────────
 async function unpublishLetter() {
   if (!activeLetter.value) return
@@ -711,7 +832,7 @@ onMounted(() => loadLetters())
           <button
             class="btn-publish"
             style="margin-left: 12px"
-            @click="showQR = true; qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('https://stackoverpetals.shop/letter/' + activeLetter.id)}`"
+            @click="showQRCode"
           >
             Show QR Code
           </button>
@@ -719,10 +840,21 @@ onMounted(() => loadLetters())
 
         <!-- QR Code Display -->
         <div v-if="showQR && qrUrl" class="qr-display">
-          <h4>QR Code — Print & Place in Keychain</h4>
-          <img :src="qrUrl" alt="QR Code" class="qr-image" />
-          <p class="qr-link">{{ `https://stackoverpetals.shop/letter/${activeLetter.id}` }}</p>
-          <a :href="qrUrl" download="qr-code.png" class="btn-download-qr">⬇ Download QR</a>
+          <h4>QR Code - Print & Place in Keychain</h4>
+          <div class="qr-card" aria-label="Scannable letter QR code">
+            <span class="qr-sparkle qr-sparkle-one">+</span>
+            <span class="qr-sparkle qr-sparkle-two">+</span>
+            <span class="qr-leaf qr-leaf-left"></span>
+            <span class="qr-leaf qr-leaf-right"></span>
+            <div class="qr-code-wrap">
+              <img :src="qrUrl" alt="QR Code" class="qr-image" crossorigin="anonymous" />
+              <span class="qr-logo-badge">
+                <img :src="QR_LOGO_SRC" alt="Stack Petals" />
+              </span>
+            </div>
+          </div>
+          <p class="qr-link">{{ getLetterUrl(activeLetter.id) }}</p>
+          <button type="button" class="btn-download-qr" @click="downloadStyledQR">Download Styled QR</button>
         </div>
       </div>
     </div>
