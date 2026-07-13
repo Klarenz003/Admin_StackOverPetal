@@ -132,6 +132,39 @@ async function saveLetter() {
 }
 
 // ── Upload Angle Photos ────────────────────────────────────────────
+async function compressAnglePhoto(file: File, maxSize = 900, quality = 0.78) {
+  if (!file.type.startsWith('image/')) return file
+
+  const image = new Image()
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = reject
+      image.src = objectUrl
+    })
+
+    const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(image.width * scale))
+    canvas.height = Math.max(1, Math.round(image.height * scale))
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', quality))
+    if (!blob) return file
+
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'angle'
+    return new File([blob], `${baseName}.webp`, { type: 'image/webp' })
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
 async function uploadAnglePhotos(e: Event) {
   if (!activeLetter.value) return
   const files = (e.target as HTMLInputElement).files
@@ -142,10 +175,17 @@ async function uploadAnglePhotos(e: Event) {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    const fileName = `${activeLetter.value.id}/angle-${Date.now()}-${i}.png`
+    if (!file.type.startsWith('image/')) continue
+
+    const optimized = await compressAnglePhoto(file)
+    const fileName = `${activeLetter.value.id}/angle-${Date.now()}-${i}.webp`
     const { data, error } = await supabase.storage
       .from('letter-photos')
-      .upload(fileName, file, { upsert: true })
+      .upload(fileName, optimized, {
+        upsert: true,
+        cacheControl: '31536000',
+        contentType: optimized.type || 'image/webp',
+      })
     if (error) { console.error(error); continue }
     const { data: urlData } = supabase.storage
       .from('letter-photos')

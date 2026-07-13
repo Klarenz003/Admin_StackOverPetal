@@ -1316,3 +1316,41 @@ tr:hover td { background: #fdf9f8; }
   .main { margin-left: 0; }
   .stats-row { grid-template-columns: 1fr 1fr; }
 }
+
+.product-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.product-image-preview img,
+.product-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #eee;
+  background: #fff;
+}
+
+.product-thumb {
+  width: 48px;
+  height: 48px;
+}
+.product-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.upload-note {
+  color: #888;
+  font-size: 12px;
+}
