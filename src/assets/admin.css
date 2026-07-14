@@ -1354,3 +1354,70 @@ tr:hover td { background: #fdf9f8; }
   color: #888;
   font-size: 12px;
 }
+
+.gallery-admin-page {
+  padding: 20px;
+}
+
+.gallery-admin-header {
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.gallery-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+  padding: 20px;
+}
+
+.gallery-admin-card {
+  background: #fff;
+  border: 1px solid #ede8e5;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.gallery-admin-card > img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: #faf8f7;
+}
+
+.gallery-admin-fields {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.gallery-admin-fields label {
+  display: grid;
+  gap: 5px;
+  color: #777;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gallery-admin-fields textarea {
+  resize: vertical;
+}
+
+.gallery-featured-toggle {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 8px !important;
+  color: #555 !important;
+}
+
+.gallery-featured-toggle input {
+  width: auto;
+}
+
+.gallery-admin-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}

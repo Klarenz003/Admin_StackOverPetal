@@ -57,4 +57,4 @@ export interface Message {
   read: boolean
 }
 
-export type AdminTab = 'overview' | 'orders' | 'messages' | 'transactions' | 'products' | 'letters' | 'delivery'
+export type AdminTab = 'overview' | 'orders' | 'messages' | 'transactions' | 'products' | 'gallery' | 'letters' | 'delivery'

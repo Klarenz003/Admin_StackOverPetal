@@ -43,7 +43,7 @@ export const useAdminStore = defineStore('admin', () => {
   const tabLabel = computed(() => ({
     overview: 'Overview', orders: 'Orders',
     messages: 'Messages', transactions: 'Transactions',
-    products: 'Products', letters: 'Letters',
+    products: 'Products', gallery: 'Gallery', letters: 'Letters',
     delivery: 'Delivery Slots',
   }[tab.value]))
 

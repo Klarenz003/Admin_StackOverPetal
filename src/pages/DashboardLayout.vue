@@ -1,14 +1,30 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import ProofLightbox   from '@/components/ProofLightbox.vue'
 import OrderModal      from '@/components/OrderModal.vue'
 import MessageModal    from '@/components/MessageModal.vue'
 
+const route = useRoute()
 const router = useRouter()
 const auth   = useAuthStore()
 const admin  = useAdminStore()
+const pageTitle = computed(() => {
+  const labels: Record<string, string> = {
+    overview: 'Overview',
+    orders: 'Orders',
+    messages: 'Messages',
+    products: 'Products',
+    gallery: 'Gallery',
+    'delivery-slots': 'Delivery Slots',
+    transactions: 'Transactions',
+    letters: 'Letters',
+  }
+
+  return labels[String(route.name || '')] || admin.tabLabel
+})
 
 function logout() {
   admin.stopAutoRefresh()
@@ -42,6 +58,9 @@ function logout() {
         <RouterLink to="/products" class="nav-item" active-class="active">
           <span class="icon">🌸</span> Products
         </RouterLink>
+        <RouterLink to="/gallery" class="nav-item" active-class="active">
+          <span class="icon">📸</span> Gallery
+        </RouterLink>
         <RouterLink to="/delivery-slots" class="nav-item" active-class="active">
           <span class="icon">📅</span> Delivery Slots
         </RouterLink>
@@ -62,7 +81,7 @@ function logout() {
     <main class="main">
       <!-- Top Bar -->
       <div class="topbar">
-        <h1>{{ admin.tabLabel }}</h1>
+        <h1>{{ pageTitle }}</h1>
         <div class="topbar-actions">
           <span class="last-refresh">Updated {{ admin.lastRefresh }}</span>
           <button class="refresh-btn" @click="admin.loadData()">⟳ Refresh</button>
