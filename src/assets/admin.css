@@ -1589,6 +1589,15 @@ tr:hover td { background: #fdf9f8; }
   text-align: center;
 }
 
+.investor-qr-title {
+  color: #8a4e67 !important;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 0 0 14px !important;
+}
+
 .investor-qr-card p {
   color: #777;
   font-size: 12px;

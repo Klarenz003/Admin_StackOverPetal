@@ -336,6 +336,7 @@ onMounted(loadInvitations)
       </div>
 
       <div class="investor-qr-card">
+        <p class="investor-qr-title">Message from Stack Petals</p>
         <div class="qr-card" aria-label="Scannable investor invitation QR code">
           <span class="qr-sparkle qr-sparkle-one">+</span>
           <span class="qr-sparkle qr-sparkle-two">+</span>
