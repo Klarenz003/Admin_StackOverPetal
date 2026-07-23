@@ -1421,3 +1421,19 @@ tr:hover td { background: #fdf9f8; }
   gap: 8px;
   padding: 0 14px 14px;
 }
+
+.admin-sale-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-sale-price strong {
+  color: #c0616b;
+}
+
+.admin-sale-price span {
+  color: #aaa;
+  font-size: 11px;
+  text-decoration: line-through;
+}

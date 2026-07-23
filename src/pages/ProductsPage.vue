@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { supabase } from '@/supabaseClient'
 
 interface Product {
   id: string
   name: string
   price: number
+  sale_price: number | null
   image: string
   category: string
   badge: string | null
@@ -23,9 +24,27 @@ const productImageInput = ref<HTMLInputElement | null>(null)
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
 
+const productCategoryOptions = [
+  'Romance',
+  'Birthday',
+  'Anniversary',
+  'Celebration',
+  'Sympathy',
+  'Graduation',
+  'Thank You',
+  'Apology',
+  'Get Well',
+  'Friendship',
+  'Home Decor',
+  'Keepsakes',
+  'Accessories',
+  'Custom Gifts',
+]
+
 const form = ref({
   name: '',
   price: 0,
+  sale_price: null as number | null,
   image: '',
   category: 'Romance',
   badge: null as string | null,
@@ -132,6 +151,7 @@ async function saveProduct() {
 const payload = {
   name: form.value.name,
   price: form.value.price,
+  sale_price: form.value.sale_price && form.value.sale_price > 0 ? form.value.sale_price : null,
   image: form.value.image,
   category: form.value.category,
   badge: form.value.badge || null,
@@ -171,6 +191,7 @@ function editProduct(product: Product) {
   editingId.value = product.id
   form.value = {
     ...product,
+    sale_price: product.sale_price ?? null,
     pre_order_allowed: product.pre_order_allowed ?? true,
     prep_days: product.prep_days ?? 5,
     delivery_restrictions: product.delivery_restrictions ?? '',
@@ -218,11 +239,20 @@ function stockClass(stock: number) {
   }
 }
 
+const categoryOptions = computed(() => {
+  const savedCategories = products.value
+    .map(product => product.category?.trim())
+    .filter((category): category is string => Boolean(category))
+
+  return Array.from(new Set([...productCategoryOptions, ...savedCategories]))
+})
+
 function resetForm() {
   editingId.value = null
   form.value = {
     name: '',
     price: 0,
+    sale_price: null,
     image: '',
     category: 'Romance',
     badge: null,
@@ -290,7 +320,11 @@ async function dragEnd() {
       </div>
       <div class="form-group">
         <label>Price *</label>
-        <input v-model.number="form.price" type="number" placeholder="0" />
+        <input v-model.number="form.price" type="number" min="0" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label>Sale Price</label>
+        <input v-model.number="form.sale_price" type="number" min="0" placeholder="Leave empty if not on sale" />
       </div>
       <div class="form-group">
         <label>Product Image</label>
@@ -299,7 +333,7 @@ async function dragEnd() {
         </div>
         <div class="product-upload-row">
           <button class="btn-small" type="button" :disabled="uploadingImage" @click="productImageInput?.click()">
-            {{ uploadingImage ? 'Uploading...' : 'Upload Bouquet Photo' }}
+            {{ uploadingImage ? 'Uploading...' : 'Upload Product Photo' }}
           </button>
           <input
             ref="productImageInput"
@@ -315,10 +349,7 @@ async function dragEnd() {
       <div class="form-group">
         <label>Category</label>
         <select v-model="form.category">
-          <option>Romance</option>
-          <option>Birthday</option>
-          <option>Sympathy</option>
-          <option>Celebration</option>
+          <option v-for="category in categoryOptions" :key="category" :value="category">{{ category }}</option>
         </select>
       </div>
       <div class="form-group">
@@ -386,7 +417,13 @@ async function dragEnd() {
         <td><img v-if="product.image" :src="product.image" :alt="product.name" class="product-thumb" /><span v-else class="no-proof">No image</span></td>
         <td><strong>{{ product.name }}</strong></td>
         <td>{{ product.category }}</td>
-        <td>₱{{ product.price.toLocaleString() }}</td>
+        <td>
+          <div v-if="product.sale_price && product.sale_price > 0 && product.sale_price < product.price" class="admin-sale-price">
+            <strong>₱{{ product.sale_price.toLocaleString() }}</strong>
+            <span>₱{{ product.price.toLocaleString() }}</span>
+          </div>
+          <span v-else>₱{{ product.price.toLocaleString() }}</span>
+        </td>
         <td>
           <div class="stock-control">
             <button class="stock-stepper" @click="adjustStock(product, -1)">-</button>
