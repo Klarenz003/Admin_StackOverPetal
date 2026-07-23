@@ -19,6 +19,8 @@ const saving = ref(false)
 const error = ref('')
 const success = ref('')
 const showQR = ref(false)
+const qrImageUrl = ref('')
+const QR_LOGO_SRC = '/images/qrlogo.png'
 
 const form = reactive({
   investorName: '',
@@ -51,6 +53,12 @@ function qrUrl(id: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`
 }
 
+function showQRCode() {
+  if (!activeInvitation.value) return
+  qrImageUrl.value = qrUrl(activeInvitation.value.id)
+  showQR.value = true
+}
+
 async function loadInvitations() {
   loading.value = true
   error.value = ''
@@ -75,7 +83,8 @@ function openInvitation(invitation: InvestorInvitation) {
   form.investorName = invitation.investor_name
   form.senderName = invitation.sender_name || 'Owner of Stack Petals'
   form.message = invitation.message
-  showQR.value = false
+  if (invitation.published) showQRCode()
+  else showQR.value = false
 }
 
 function newInvitation() {
@@ -88,6 +97,7 @@ Stack Petals combines crafted flowers, personalized QR letters, photo memories, 
 
 If you are open to learning more, I would be honored for you to view our website and see what we are growing.`
   showQR.value = false
+  qrImageUrl.value = ''
 }
 
 async function saveInvitation(publish = false) {
@@ -128,7 +138,7 @@ async function saveInvitation(publish = false) {
 
   activeInvitation.value = data
   success.value = publish ? 'Invitation published and QR is ready.' : 'Invitation saved.'
-  showQR.value = publish
+  if (publish) showQRCode()
   await loadInvitations()
 }
 
@@ -146,6 +156,7 @@ async function unpublishInvitation() {
 
   activeInvitation.value.published = false
   showQR.value = false
+  qrImageUrl.value = ''
   await loadInvitations()
 }
 
@@ -153,6 +164,106 @@ function copyLink() {
   if (!activeInvitation.value) return
   navigator.clipboard.writeText(invitationUrl(activeInvitation.value.id))
   success.value = 'Invitation link copied.'
+}
+
+function loadCanvasImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.arcTo(x + width, y, x + width, y + height, radius)
+  ctx.arcTo(x + width, y + height, x, y + height, radius)
+  ctx.arcTo(x, y + height, x, y, radius)
+  ctx.arcTo(x, y, x + width, y, radius)
+  ctx.closePath()
+}
+
+function drawQrDecorations(ctx: CanvasRenderingContext2D) {
+  ctx.strokeStyle = '#F0B7C1'
+  ctx.fillStyle = '#F0B7C1'
+  ctx.lineWidth = 8
+  ctx.globalAlpha = 0.9
+  drawRoundRect(ctx, 52, 52, 1096, 1096, 88)
+  ctx.stroke()
+  ctx.lineWidth = 3
+  drawRoundRect(ctx, 70, 70, 1060, 1060, 72)
+  ctx.stroke()
+
+  ctx.globalAlpha = 0.75
+  ;[
+    [126, 142, 18], [104, 182, 10], [1084, 1018, 18], [1046, 1068, 6], [112, 510, 8],
+  ].forEach(([x, y, size]) => {
+    ctx.beginPath()
+    ctx.moveTo(x, y - size)
+    ctx.lineTo(x + size * 0.3, y - size * 0.3)
+    ctx.lineTo(x + size, y)
+    ctx.lineTo(x + size * 0.3, y + size * 0.3)
+    ctx.lineTo(x, y + size)
+    ctx.lineTo(x - size * 0.3, y + size * 0.3)
+    ctx.lineTo(x - size, y)
+    ctx.lineTo(x - size * 0.3, y - size * 0.3)
+    ctx.closePath()
+    ctx.fill()
+  })
+  ctx.globalAlpha = 1
+}
+
+async function downloadStyledQR() {
+  if (!activeInvitation.value || !qrImageUrl.value) return
+
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1200
+    canvas.height = 1200
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const qrImage = await loadCanvasImage(qrImageUrl.value)
+    const logoImage = await loadCanvasImage(QR_LOGO_SRC)
+
+    const bg = ctx.createRadialGradient(600, 560, 80, 600, 600, 760)
+    bg.addColorStop(0, '#FFF9F9')
+    bg.addColorStop(1, '#FFF0F2')
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, 1200, 1200)
+    drawQrDecorations(ctx)
+
+    ctx.drawImage(qrImage, 170, 170, 860, 860)
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.fillStyle = '#FFF0F2'
+    ctx.shadowColor = 'rgba(122, 74, 100, 0.18)'
+    ctx.shadowBlur = 18
+    ctx.fill()
+    ctx.clip()
+    ctx.shadowBlur = 0
+    ctx.drawImage(logoImage, 488, 488, 224, 224)
+    ctx.restore()
+
+    ctx.beginPath()
+    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.lineWidth = 10
+    ctx.strokeStyle = '#FFF7F8'
+    ctx.stroke()
+
+    const link = document.createElement('a')
+    link.href = canvas.toDataURL('image/png')
+    link.download = `stack-petals-investor-invite-${activeInvitation.value.id}-qr.png`
+    link.click()
+  } catch (downloadError) {
+    console.error('Failed to download styled QR:', downloadError)
+    window.open(qrImageUrl.value, '_blank', 'noopener,noreferrer')
+  }
 }
 
 function formatDate(value: string) {
@@ -216,7 +327,7 @@ onMounted(loadInvitations)
       </div>
     </div>
 
-    <div v-if="activeInvitation?.published && (showQR || activeInvitation)" class="section-card investor-qr-section">
+    <div v-if="activeInvitation?.published && showQR && qrImageUrl" class="section-card investor-qr-section">
       <div class="section-header">
         <div>
           <h3>Invitation QR</h3>
@@ -225,9 +336,23 @@ onMounted(loadInvitations)
       </div>
 
       <div class="investor-qr-card">
-        <img :src="qrUrl(activeInvitation.id)" alt="Investor invitation QR code" />
+        <div class="qr-card" aria-label="Scannable investor invitation QR code">
+          <span class="qr-sparkle qr-sparkle-one">+</span>
+          <span class="qr-sparkle qr-sparkle-two">+</span>
+          <span class="qr-leaf qr-leaf-left"></span>
+          <span class="qr-leaf qr-leaf-right"></span>
+          <div class="qr-code-wrap">
+            <img :src="qrImageUrl" alt="Investor invitation QR code" class="qr-image" crossorigin="anonymous" />
+            <span class="qr-logo-badge">
+              <img :src="QR_LOGO_SRC" alt="Stack Petals" />
+            </span>
+          </div>
+        </div>
         <p>{{ invitationUrl(activeInvitation.id) }}</p>
-        <button class="refresh-btn" type="button" @click="copyLink">Copy Link</button>
+        <div class="investor-qr-actions">
+          <button class="refresh-btn" type="button" @click="copyLink">Copy Link</button>
+          <button class="btn-download-qr" type="button" @click="downloadStyledQR">Download Styled QR</button>
+        </div>
       </div>
     </div>
 
