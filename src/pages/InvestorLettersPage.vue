@@ -31,7 +31,7 @@ If you are open to learning more, I would be honored for you to view our website
 })
 
 const inviteBaseUrl = computed(() =>
-  (import.meta.env.VITE_INVESTOR_PORTAL_URL || 'http://localhost:5174').replace(/\/$/, ''),
+  (import.meta.env.VITE_INVESTOR_PORTAL_URL || 'https://invest.stackoverpetals.shop').replace(/\/$/, ''),
 )
 
 function invitationUrl(id: string) {
