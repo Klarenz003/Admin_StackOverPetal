@@ -21,15 +21,24 @@ const success = ref('')
 const showQR = ref(false)
 const qrImageUrl = ref('')
 const QR_LOGO_SRC = '/images/qrlogo.png'
+const DEFAULT_INVESTOR_MESSAGE = `Good day.
+
+I hope you're doing well.
+
+I wanted to ask if you'd be open to hearing about my small business, Stack Petals. It's a handcrafted bouquet business, but what makes it different is that every bouquet comes with a QR code that can open a virtual message, photo memories, a 360° view of the bouquet, and even music.
+
+I'm planning to grow the business, and I'm currently looking for someone who might be interested in investing. If you're open to it, I'd really appreciate the chance to present my business plan and explain how your investment could help the business grow.
+
+There's absolutely no pressure. I simply wanted to ask if you'd be interested in hearing my proposal. Thank you for taking the time to read my message, and I truly appreciate your consideration.
+
+God bless.
+
+Best regards,`
 
 const form = reactive({
   investorName: '',
   senderName: 'Owner of Stack Petals',
-  message: `I would like to personally invite you to take a closer look at Stack Petals - a handcrafted flower and digital keepsake business built with care, creativity, and long-term growth in mind.
-
-Stack Petals combines crafted flowers, personalized QR letters, photo memories, music, and interactive bouquet experiences into one meaningful gift. We are building not just a product, but a memorable customer experience.
-
-If you are open to learning more, I would be honored for you to view our website and see what we are growing.`,
+  message: DEFAULT_INVESTOR_MESSAGE,
 })
 
 const inviteBaseUrl = computed(() =>
@@ -91,11 +100,7 @@ function newInvitation() {
   activeInvitation.value = null
   form.investorName = ''
   form.senderName = 'Owner of Stack Petals'
-  form.message = `I would like to personally invite you to take a closer look at Stack Petals - a handcrafted flower and digital keepsake business built with care, creativity, and long-term growth in mind.
-
-Stack Petals combines crafted flowers, personalized QR letters, photo memories, music, and interactive bouquet experiences into one meaningful gift. We are building not just a product, but a memorable customer experience.
-
-If you are open to learning more, I would be honored for you to view our website and see what we are growing.`
+  form.message = DEFAULT_INVESTOR_MESSAGE
   showQR.value = false
   qrImageUrl.value = ''
 }
@@ -236,22 +241,43 @@ async function downloadStyledQR() {
     ctx.fillRect(0, 0, 1200, 1200)
     drawQrDecorations(ctx)
 
-    ctx.drawImage(qrImage, 170, 170, 860, 860)
+    ctx.fillStyle = '#8E5671'
+    ctx.font = '600 54px "Cormorant Garamond", Georgia, serif'
+    ctx.textAlign = 'center'
+    ctx.letterSpacing = '1px'
+    ctx.fillText('Message from Stack Petals', 600, 154)
+    ctx.letterSpacing = '0px'
+
+    ctx.strokeStyle = 'rgba(240, 183, 193, 0.86)'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(365, 184)
+    ctx.lineTo(548, 184)
+    ctx.moveTo(652, 184)
+    ctx.lineTo(835, 184)
+    ctx.stroke()
+
+    ctx.fillStyle = '#F0B7C1'
+    ctx.beginPath()
+    ctx.arc(600, 184, 6, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.drawImage(qrImage, 170, 210, 860, 860)
 
     ctx.save()
     ctx.beginPath()
-    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.arc(600, 640, 112, 0, Math.PI * 2)
     ctx.fillStyle = '#FFF0F2'
     ctx.shadowColor = 'rgba(122, 74, 100, 0.18)'
     ctx.shadowBlur = 18
     ctx.fill()
     ctx.clip()
     ctx.shadowBlur = 0
-    ctx.drawImage(logoImage, 488, 488, 224, 224)
+    ctx.drawImage(logoImage, 488, 528, 224, 224)
     ctx.restore()
 
     ctx.beginPath()
-    ctx.arc(600, 600, 112, 0, Math.PI * 2)
+    ctx.arc(600, 640, 112, 0, Math.PI * 2)
     ctx.lineWidth = 10
     ctx.strokeStyle = '#FFF7F8'
     ctx.stroke()
