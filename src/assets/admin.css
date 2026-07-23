@@ -1437,3 +1437,175 @@ tr:hover td { background: #fdf9f8; }
   font-size: 11px;
   text-decoration: line-through;
 }
+
+/* ── Investor Access ───────────────────────────────────────────── */
+.investor-access-page {
+  padding: 20px;
+}
+
+.investor-access-card {
+  max-width: 980px;
+}
+
+.investor-access-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px 24px 24px;
+}
+
+.investor-access-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.investor-access-form input {
+  border: 1px solid #e0dada;
+  border-radius: 8px;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.investor-access-form input:focus {
+  border-color: #5f8872;
+  outline: none;
+}
+
+.investor-create-btn {
+  align-self: end;
+  min-height: 40px;
+}
+
+.investor-create-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.investor-access-error,
+.investor-access-success {
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 24px 24px;
+  padding: 10px 12px;
+}
+
+.investor-access-error {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.investor-access-success {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+@media (max-width: 760px) {
+  .investor-access-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Investor Letters ──────────────────────────────────────────── */
+.investor-letters-page {
+  padding: 20px;
+}
+
+.investor-letter-editor {
+  max-width: 980px;
+}
+
+.investor-letter-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px 24px 24px;
+}
+
+.investor-letter-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.investor-letter-form label.full,
+.investor-letter-actions,
+.investor-letter-form .investor-access-error,
+.investor-letter-form .investor-access-success {
+  grid-column: 1 / -1;
+}
+
+.investor-letter-form input,
+.investor-letter-form textarea {
+  border: 1px solid #e0dada;
+  border-radius: 8px;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.investor-letter-form textarea {
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.investor-letter-form input:focus,
+.investor-letter-form textarea:focus {
+  border-color: #5f8872;
+  outline: none;
+}
+
+.investor-letter-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.investor-letter-actions .save-btn,
+.investor-letter-actions .refresh-btn {
+  width: auto;
+}
+
+.publish-investor-btn {
+  background: #c48b8d;
+}
+
+.publish-investor-btn:hover {
+  background: #ad7478;
+}
+
+.investor-qr-section {
+  max-width: 520px;
+}
+
+.investor-qr-card {
+  padding: 24px;
+  text-align: center;
+}
+
+.investor-qr-card img {
+  width: min(320px, 100%);
+  border: 14px solid #fff7f8;
+  border-radius: 24px;
+  box-shadow: 0 16px 36px rgba(86, 61, 55, 0.12);
+}
+
+.investor-qr-card p {
+  color: #777;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .investor-letter-form {
+    grid-template-columns: 1fr;
+  }
+}

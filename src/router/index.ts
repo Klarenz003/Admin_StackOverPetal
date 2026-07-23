@@ -16,6 +16,8 @@ const router = createRouter({
         { path: 'gallery', name: 'gallery', component: () => import('@/pages/GalleryPage.vue') },
         { path: 'delivery-slots', name: 'delivery-slots', component: () => import('@/pages/DeliveryCapacityPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
+        { path: 'investor-access', name: 'investor-access', component: () => import('@/pages/InvestorAccessPage.vue') },
+        { path: 'investor-letters', name: 'investor-letters', component: () => import('@/pages/InvestorLettersPage.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

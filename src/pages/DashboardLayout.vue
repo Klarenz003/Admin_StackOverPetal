@@ -21,6 +21,8 @@ const pageTitle = computed(() => {
     'delivery-slots': 'Delivery Slots',
     transactions: 'Transactions',
     letters: 'Letters',
+    'investor-access': 'Investor Access',
+    'investor-letters': 'Investor Letters',
   }
 
   return labels[String(route.name || '')] || admin.tabLabel
@@ -70,6 +72,12 @@ function logout() {
         <RouterLink to="/letters" class="nav-item" active-class="active">
           <span class="icon">💌</span> Letters
         </RouterLink>
+        <RouterLink to="/investor-access" class="nav-item" active-class="active">
+          <span class="icon">ID</span> Investor Access
+        </RouterLink>
+        <RouterLink to="/investor-letters" class="nav-item" active-class="active">
+          <span class="icon">QR</span> Investor Letters
+        </RouterLink>
       </nav>
 
       <div class="sidebar-footer">
@@ -98,3 +106,5 @@ function logout() {
   <OrderModal />
   <MessageModal />
 </template>
+
+
