@@ -119,7 +119,14 @@ watch(
 
       <div class="sidebar-footer">
         <button class="logout-btn" @click="logout" :title="sidebarCollapsed ? 'Sign Out' : undefined">
-          <span class="logout-icon">⎋</span>
+          <span class="logout-icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32" focusable="false">
+              <path class="logout-door" d="M6.5 6.8 15 4.5c1-.28 2 .48 2 1.52v19.96c0 1.04-1 1.8-2 1.52l-8.5-2.3A2 2 0 0 1 5 23.27V8.73a2 2 0 0 1 1.5-1.93Z" />
+              <path class="logout-frame" d="M18.5 8h5v6M23.5 18v6h-5" />
+              <path class="logout-arrow" d="M15.5 16h9m-3.2-3.6L25 16l-3.7 3.6" />
+              <circle class="logout-knob" cx="12.2" cy="16" r="1.15" />
+            </svg>
+          </span>
           <span class="nav-label">Sign Out</span>
         </button>
       </div>

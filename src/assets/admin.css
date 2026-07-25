@@ -105,7 +105,45 @@ body { font-family: 'Inter', sans-serif; background: #f4f1ee; color: #222; min-h
 .logout-btn:hover { background: #fdf0ef; border-color: #d8a5a7; color: #c0392b; }
 .logout-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 7px; background: #f5f0ee; font-size: 10px; font-weight: 800;
+  width: 28px; height: 28px; border-radius: 9px;
+  background: linear-gradient(135deg, #fff7f6, #edf7f2);
+  border: 1px solid #eadbd7;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+  color: #8a5c62;
+  flex: 0 0 auto;
+}
+
+.logout-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.logout-door {
+  fill: #8f6a70;
+}
+
+.logout-frame,
+.logout-arrow {
+  fill: none;
+  stroke: #5f8872;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.logout-arrow {
+  stroke: #c48b8d;
+}
+
+.logout-knob {
+  fill: #fffaf9;
+}
+
+.logout-btn:hover .logout-icon {
+  background: linear-gradient(135deg, #fdf0ef, #e8f5ee);
+  border-color: #d8a5a7;
+  transform: translateX(1px);
 }
 
 /* ── Main ── */
