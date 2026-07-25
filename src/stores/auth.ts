@@ -5,6 +5,24 @@ import { supabase } from '@/supabaseClient'
 
 export const useAuthStore = defineStore('auth', () => {
   const loggedIn = ref(false)
+  const initialized = ref(false)
+  let initPromise: Promise<void> | null = null
+
+  async function initAuth() {
+    if (initPromise) return initPromise
+
+    initPromise = (async () => {
+      const { data } = await supabase.auth.getSession()
+      loggedIn.value = Boolean(data.session)
+      initialized.value = true
+
+      supabase.auth.onAuthStateChange((_event, session) => {
+        loggedIn.value = Boolean(session)
+      })
+    })()
+
+    return initPromise
+  }
 
   async function login(email: string, password: string): Promise<string> {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -18,5 +36,5 @@ export const useAuthStore = defineStore('auth', () => {
     loggedIn.value = false
   }
 
-  return { loggedIn, login, logout }
+  return { loggedIn, initialized, initAuth, login, logout }
 })
