@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
@@ -13,6 +13,10 @@ const auth = useAuthStore()
 const admin = useAdminStore()
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
+const INACTIVITY_LIMIT_MS = 60 * 60 * 1000
+let inactivityTimer: ReturnType<typeof window.setTimeout> | null = null
+let loggingOutForInactivity = false
+const activityEvents = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'pointerdown']
 
 const pageTitle = computed(() => {
   const labels: Record<string, string> = {
@@ -50,6 +54,25 @@ function logout() {
   router.push('/login')
 }
 
+async function logoutForInactivity() {
+  if (loggingOutForInactivity) return
+  loggingOutForInactivity = true
+  admin.stopAutoRefresh()
+  await auth.logout()
+  router.push('/login')
+}
+
+function clearInactivityTimer() {
+  if (!inactivityTimer) return
+  window.clearTimeout(inactivityTimer)
+  inactivityTimer = null
+}
+
+function resetInactivityTimer() {
+  clearInactivityTimer()
+  inactivityTimer = window.setTimeout(logoutForInactivity, INACTIVITY_LIMIT_MS)
+}
+
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
@@ -66,8 +89,23 @@ watch(
   () => route.fullPath,
   () => {
     closeMobileSidebar()
+    resetInactivityTimer()
   },
 )
+
+onMounted(() => {
+  resetInactivityTimer()
+  activityEvents.forEach(eventName => {
+    window.addEventListener(eventName, resetInactivityTimer, { passive: true })
+  })
+})
+
+onBeforeUnmount(() => {
+  clearInactivityTimer()
+  activityEvents.forEach(eventName => {
+    window.removeEventListener(eventName, resetInactivityTimer)
+  })
+})
 </script>
 
 <template>
