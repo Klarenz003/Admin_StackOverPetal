@@ -32,14 +32,14 @@ const pageTitle = computed(() => {
 })
 
 const navItems = computed(() => [
-  { to: '/overview', icon: 'OV', label: 'Overview' },
-  { to: '/orders', icon: 'OR', label: 'Orders', badge: admin.pendingOrders },
-  { to: '/messages', icon: 'MS', label: 'Messages', badge: admin.unreadMessages },
-  { to: '/products', icon: 'PR', label: 'Products' },
-  { to: '/gallery', icon: 'GA', label: 'Gallery' },
-  { to: '/delivery-slots', icon: 'DS', label: 'Delivery Slots' },
-  { to: '/transactions', icon: 'TR', label: 'Transactions' },
-  { to: '/letters', icon: 'LT', label: 'Letters' },
+  { to: '/overview', icon: '📊', label: 'Overview' },
+  { to: '/orders', icon: '📦', label: 'Orders', badge: admin.pendingOrders },
+  { to: '/messages', icon: '💬', label: 'Messages', badge: admin.unreadMessages },
+  { to: '/products', icon: '🌸', label: 'Products' },
+  { to: '/gallery', icon: '📸', label: 'Gallery' },
+  { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
+  { to: '/transactions', icon: '💳', label: 'Transactions' },
+  { to: '/letters', icon: '💌', label: 'Letters' },
   { to: '/investor-access', icon: 'ID', label: 'Investor Access' },
   { to: '/investor-letters', icon: 'QR', label: 'Investor Letters' },
 ])
@@ -81,7 +81,7 @@ watch(
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div>
-          <h2><span class="brand-icon">SP</span><span class="brand-text">Stack Petals</span></h2>
+          <h2><span class="brand-icon">🌸</span><span class="brand-text">Stack Petals</span></h2>
           <p>Admin Panel</p>
         </div>
         <button
@@ -119,7 +119,7 @@ watch(
 
       <div class="sidebar-footer">
         <button class="logout-btn" @click="logout" :title="sidebarCollapsed ? 'Sign Out' : undefined">
-          <span class="logout-icon">SO</span>
+          <span class="logout-icon">⎋</span>
           <span class="nav-label">Sign Out</span>
         </button>
       </div>

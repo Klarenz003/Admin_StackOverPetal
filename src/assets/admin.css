@@ -58,7 +58,7 @@ body { font-family: 'Inter', sans-serif; background: #f4f1ee; color: #222; min-h
 .brand-icon {
   width: 30px; height: 30px; border-radius: 10px; background: #edf7f2; color: #5f8872;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: Inter, sans-serif; font-size: 11px; font-weight: 800;
+  font-size: 17px; font-weight: 800;
 }
 
 .sidebar-toggle,
@@ -83,7 +83,7 @@ body { font-family: 'Inter', sans-serif; background: #f4f1ee; color: #222; min-h
 .nav-item:hover  { background: #f5f0ee; color: #222; }
 .nav-item.active { background: #5f8872; color: #fff; }
 .icon {
-  font-size: 11px; width: 24px; height: 24px; text-align: center; flex: 0 0 auto;
+  font-size: 15px; width: 24px; height: 24px; text-align: center; flex: 0 0 auto;
   border-radius: 8px; background: #f5f0ee; color: #5f8872;
   display: inline-flex; align-items: center; justify-content: center; font-weight: 800;
 }
