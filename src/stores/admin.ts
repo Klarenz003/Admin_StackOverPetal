@@ -551,6 +551,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   function startAutoRefresh() {
+    stopAutoRefresh()
     _refreshInterval = window.setInterval(() => loadData(), 30000)
   }
 

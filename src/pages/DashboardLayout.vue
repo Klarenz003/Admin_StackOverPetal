@@ -94,6 +94,8 @@ watch(
 )
 
 onMounted(() => {
+  admin.loadData()
+  admin.startAutoRefresh()
   resetInactivityTimer()
   activityEvents.forEach(eventName => {
     window.addEventListener(eventName, resetInactivityTimer, { passive: true })
@@ -101,6 +103,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  admin.stopAutoRefresh()
   clearInactivityTimer()
   activityEvents.forEach(eventName => {
     window.removeEventListener(eventName, resetInactivityTimer)
