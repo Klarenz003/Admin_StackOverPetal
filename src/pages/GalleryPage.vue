@@ -10,7 +10,11 @@ interface GalleryImage {
   featured: boolean
   sort_order: number
   created_at: string
+  category: string
+  focal_position: 'top' | 'center' | 'bottom'
 }
+
+const galleryCategories = ['Crafted Flowers', 'Bouquets', 'Keepsakes', 'Customer Moments']
 
 const images = ref<GalleryImage[]>([])
 const loading = ref(false)
@@ -112,6 +116,8 @@ async function uploadGalleryImages(event: Event) {
         caption: '',
         featured: true,
         sort_order: nextOrder,
+        category: 'Crafted Flowers',
+        focal_position: 'center',
       })
 
       if (insertError) console.error(insertError)
@@ -133,6 +139,8 @@ async function saveImage(image: GalleryImage) {
       caption: image.caption || '',
       featured: image.featured,
       sort_order: Number(image.sort_order || 0),
+      category: image.category || 'Crafted Flowers',
+      focal_position: image.focal_position || 'center',
     })
     .eq('id', image.id)
 
@@ -172,6 +180,7 @@ onMounted(loadGalleryImages)
         <div>
           <h3>Customer Gallery</h3>
           <small>Upload photos to feature on the public Gallery page.</small>
+          <small class="gallery-compression-note">Uploads are automatically resized and converted to WebP.</small>
         </div>
         <button class="btn-small" type="button" :disabled="uploading" @click="galleryInput?.click()">
           {{ uploading ? 'Uploading...' : 'Upload Images' }}
@@ -194,7 +203,11 @@ onMounted(loadGalleryImages)
 
       <div v-else class="gallery-admin-grid">
         <article v-for="image in images" :key="image.id" class="gallery-admin-card">
-          <img :src="image.image_url" :alt="image.title || 'Gallery image'" />
+          <img
+            :src="image.image_url"
+            :alt="image.title || 'Gallery image'"
+            :style="{ objectPosition: image.focal_position || 'center' }"
+          />
           <div class="gallery-admin-fields">
             <label>
               Title
@@ -204,6 +217,22 @@ onMounted(loadGalleryImages)
               Caption
               <textarea v-model="image.caption" class="detail-input" rows="2" placeholder="Short caption"></textarea>
             </label>
+            <div class="gallery-admin-options">
+              <label>
+                Category
+                <select v-model="image.category" class="detail-input">
+                  <option v-for="category in galleryCategories" :key="category" :value="category">{{ category }}</option>
+                </select>
+              </label>
+              <label>
+                Crop Focus
+                <select v-model="image.focal_position" class="detail-input">
+                  <option value="top">Top</option>
+                  <option value="center">Center</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </label>
+            </div>
             <label>
               Sort Order
               <input v-model.number="image.sort_order" class="detail-input" type="number" min="0" />

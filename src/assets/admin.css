@@ -1519,10 +1519,22 @@ tr:hover td { background: #fdf9f8; }
 
 .gallery-admin-card > img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
   background: #faf8f7;
+}
+
+.gallery-compression-note {
+  display: block;
+  margin-top: 4px;
+  color: #5f8872 !important;
+}
+
+.gallery-admin-options {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .gallery-admin-fields {
