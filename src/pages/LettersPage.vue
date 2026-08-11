@@ -31,7 +31,7 @@ const removingAnglePhotos = ref(false)
 const qrUrl = ref('')
 const showQR = ref(false)
 const QR_LOGO_SRC = '/images/qrlogo.png'
-const PETAL_MESSAGE_LIMIT = 30
+const PETAL_MESSAGE_LIMIT = 60
 const PETAL_COUNT = 6
 
 function normalizePetalMessages(messages?: string[]) {
