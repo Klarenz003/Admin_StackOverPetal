@@ -20,7 +20,55 @@ const images = ref<GalleryImage[]>([])
 const loading = ref(false)
 const uploading = ref(false)
 const savingId = ref<string | null>(null)
+const draggedIndex = ref<number | null>(null)
+const savingOrder = ref(false)
 const galleryInput = ref<HTMLInputElement | null>(null)
+
+function dragStart(index: number, event: DragEvent) {
+  draggedIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', images.value[index].id)
+  }
+}
+
+function dragOver(index: number) {
+  if (draggedIndex.value === null || draggedIndex.value === index) return
+  const [draggedImage] = images.value.splice(draggedIndex.value, 1)
+  images.value.splice(index, 0, draggedImage)
+  draggedIndex.value = index
+}
+
+async function saveGalleryOrder() {
+  savingOrder.value = true
+  images.value.forEach((image, index) => { image.sort_order = index })
+
+  const results = await Promise.all(
+    images.value.map((image, index) =>
+      supabase.from('gallery_images').update({ sort_order: index }).eq('id', image.id)
+    )
+  )
+  savingOrder.value = false
+
+  if (results.some(result => result.error)) {
+    alert('Failed to save the new gallery arrangement')
+    await loadGalleryImages()
+  }
+}
+
+async function dragEnd() {
+  if (draggedIndex.value === null) return
+  draggedIndex.value = null
+  await saveGalleryOrder()
+}
+
+async function moveImage(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target >= images.value.length || savingOrder.value) return
+  const [image] = images.value.splice(index, 1)
+  images.value.splice(target, 0, image)
+  await saveGalleryOrder()
+}
 
 async function loadGalleryImages() {
   loading.value = true
@@ -202,7 +250,24 @@ onMounted(loadGalleryImages)
       </div>
 
       <div v-else class="gallery-admin-grid">
-        <article v-for="image in images" :key="image.id" class="gallery-admin-card">
+        <article
+          v-for="(image, index) in images"
+          :key="image.id"
+          class="gallery-admin-card"
+          :class="{ dragging: draggedIndex === index }"
+          draggable="true"
+          @dragstart="dragStart(index, $event)"
+          @dragover.prevent="dragOver(index)"
+          @dragend="dragEnd"
+        >
+          <div class="gallery-drag-toolbar">
+            <span class="gallery-drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange">&#8942;&#8942;</span>
+            <span>{{ savingOrder ? 'Saving arrangement...' : 'Drag to rearrange' }}</span>
+            <div class="gallery-mobile-order-actions">
+              <button type="button" :disabled="index === 0 || savingOrder" aria-label="Move image earlier" @click="moveImage(index, -1)">&#8593;</button>
+              <button type="button" :disabled="index === images.length - 1 || savingOrder" aria-label="Move image later" @click="moveImage(index, 1)">&#8595;</button>
+            </div>
+          </div>
           <img
             :src="image.image_url"
             :alt="image.title || 'Gallery image'"
@@ -233,10 +298,6 @@ onMounted(loadGalleryImages)
                 </select>
               </label>
             </div>
-            <label>
-              Sort Order
-              <input v-model.number="image.sort_order" class="detail-input" type="number" min="0" />
-            </label>
             <label class="gallery-featured-toggle">
               <input v-model="image.featured" type="checkbox" />
               Featured on customer gallery

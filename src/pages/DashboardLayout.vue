@@ -27,6 +27,7 @@ const pageTitle = computed(() => {
     gallery: 'Gallery',
     'delivery-slots': 'Delivery Slots',
     transactions: 'Transactions',
+    costing: 'Costing & Profit',
     letters: 'Letters',
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
@@ -36,6 +37,7 @@ const pageTitle = computed(() => {
 })
 
 const navItems = computed(() => [
+  { to: '/costing', icon: 'PHP', label: 'Costing & Profit' },
   { to: '/overview', icon: '📊', label: 'Overview' },
   { to: '/orders', icon: '📦', label: 'Orders', badge: admin.pendingOrders },
   { to: '/messages', icon: '💬', label: 'Messages', badge: admin.unreadMessages },
