@@ -20,6 +20,7 @@ const images = ref<GalleryImage[]>([])
 const loading = ref(false)
 const uploading = ref(false)
 const savingId = ref<string | null>(null)
+const savingAll = ref(false)
 const draggedIndex = ref<number | null>(null)
 const savingOrder = ref(false)
 const galleryInput = ref<HTMLInputElement | null>(null)
@@ -202,6 +203,39 @@ async function saveImage(image: GalleryImage) {
   await loadGalleryImages()
 }
 
+async function saveAllImages() {
+  if (savingAll.value || images.value.length === 0) return
+
+  savingAll.value = true
+  images.value.forEach((image, index) => { image.sort_order = index })
+
+  const results = await Promise.all(
+    images.value.map((image, index) =>
+      supabase
+        .from('gallery_images')
+        .update({
+          title: image.title || '',
+          caption: image.caption || '',
+          featured: image.featured,
+          sort_order: index,
+          category: image.category || 'Crafted Flowers',
+          focal_position: image.focal_position || 'center',
+        })
+        .eq('id', image.id)
+    )
+  )
+
+  savingAll.value = false
+
+  if (results.some(result => result.error)) {
+    alert('Failed to save all gallery changes')
+    await loadGalleryImages()
+    return
+  }
+
+  await loadGalleryImages()
+}
+
 async function removeImage(image: GalleryImage) {
   if (!confirm('Remove this image from the gallery?')) return
 
@@ -230,9 +264,14 @@ onMounted(loadGalleryImages)
           <small>Upload photos to feature on the public Gallery page.</small>
           <small class="gallery-compression-note">Uploads are automatically resized and converted to WebP.</small>
         </div>
-        <button class="btn-small" type="button" :disabled="uploading" @click="galleryInput?.click()">
-          {{ uploading ? 'Uploading...' : 'Upload Images' }}
-        </button>
+        <div class="gallery-header-actions">
+          <button class="btn-small gallery-save-all-btn" type="button" :disabled="savingAll || uploading || images.length === 0" @click="saveAllImages">
+            {{ savingAll ? 'Saving All...' : 'Save All' }}
+          </button>
+          <button class="btn-small" type="button" :disabled="uploading || savingAll" @click="galleryInput?.click()">
+            {{ uploading ? 'Uploading...' : 'Upload Images' }}
+          </button>
+        </div>
         <input
           ref="galleryInput"
           type="file"
@@ -304,10 +343,10 @@ onMounted(loadGalleryImages)
             </label>
           </div>
           <div class="gallery-admin-actions">
-            <button class="btn-small" type="button" :disabled="savingId === image.id" @click="saveImage(image)">
+            <button class="btn-small" type="button" :disabled="savingId === image.id || savingAll" @click="saveImage(image)">
               {{ savingId === image.id ? 'Saving...' : 'Save' }}
             </button>
-            <button class="btn-small btn-danger" type="button" @click="removeImage(image)">Remove</button>
+            <button class="btn-small btn-danger" type="button" :disabled="savingAll" @click="removeImage(image)">Remove</button>
           </div>
         </article>
       </div>

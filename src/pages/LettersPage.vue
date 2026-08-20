@@ -18,8 +18,25 @@ interface Letter {
   created_at: string
 }
 
+interface LetterAnalyticsSummary {
+  letter_id: string
+  total_opens: number
+  unique_viewers: number
+  engaged_views: number
+  completed_views: number
+  memories_views: number
+  bouquet_360_views: number
+  music_plays: number
+  replayed_views: number
+  last_viewed_at: string | null
+  screen_views: Record<string, number>
+}
+
 const letters = ref<Letter[]>([])
 const loading = ref(false)
+const analyticsLoading = ref(false)
+const analyticsError = ref('')
+const analyticsByLetter = ref<Record<string, LetterAnalyticsSummary>>({})
 const activeLetter = ref<Letter | null>(null)
 const creatingLetter = ref(false)
 const uploading = ref(false)
@@ -33,6 +50,83 @@ const showQR = ref(false)
 const QR_LOGO_SRC = '/images/qrlogo.png'
 const PETAL_MESSAGE_LIMIT = 60
 const PETAL_COUNT = 6
+const LETTER_SCREEN_LABELS = [
+  'Welcome',
+  'Bloom',
+  'Petals',
+  'Letter',
+  'Memories',
+  'Gift',
+  'Reminder',
+  'Sender',
+  'Keepsake',
+  'Finish',
+]
+
+function toNumber(value: unknown) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function analyticsFor(letterId: string): LetterAnalyticsSummary | null {
+  return analyticsByLetter.value[letterId] || null
+}
+
+function completionRate(summary: LetterAnalyticsSummary | null) {
+  if (!summary?.total_opens) return 0
+  return Math.min(100, Math.round((summary.completed_views / summary.total_opens) * 100))
+}
+
+function formatLastViewed(value: string | null | undefined) {
+  if (!value) return 'Not viewed yet'
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function screenViewCount(summary: LetterAnalyticsSummary | null, screen: number) {
+  return summary?.screen_views?.[String(screen)] || 0
+}
+
+function screenBarWidth(summary: LetterAnalyticsSummary | null, screen: number) {
+  if (!summary) return 0
+  const highest = Math.max(1, ...Object.values(summary.screen_views || {}).map(toNumber))
+  return Math.round((screenViewCount(summary, screen) / highest) * 100)
+}
+
+async function loadLetterAnalytics() {
+  analyticsLoading.value = true
+  analyticsError.value = ''
+
+  const { data, error } = await supabase.rpc('get_letter_analytics_summary', {
+    p_letter_id: null,
+  })
+
+  if (error) {
+    console.error(error)
+    analyticsError.value = 'Analytics are not ready. Apply the latest letter analytics migration in Supabase.'
+    analyticsLoading.value = false
+    return
+  }
+
+  analyticsByLetter.value = Object.fromEntries((data || []).map((row: any) => [
+    row.letter_id,
+    {
+      ...row,
+      total_opens: toNumber(row.total_opens),
+      unique_viewers: toNumber(row.unique_viewers),
+      engaged_views: toNumber(row.engaged_views),
+      completed_views: toNumber(row.completed_views),
+      memories_views: toNumber(row.memories_views),
+      bouquet_360_views: toNumber(row.bouquet_360_views),
+      music_plays: toNumber(row.music_plays),
+      replayed_views: toNumber(row.replayed_views),
+      screen_views: row.screen_views || {},
+    },
+  ]))
+  analyticsLoading.value = false
+}
 
 function normalizePetalMessages(messages?: string[]) {
   const petals = Array.isArray(messages) ? [...messages] : []
@@ -61,6 +155,7 @@ async function loadLetters() {
   if (error) console.error(error)
   letters.value = data || []
   loading.value = false
+  await loadLetterAnalytics()
 }
 
 // ── Open Letter ────────────────────────────────────────────────────
@@ -637,6 +732,12 @@ onMounted(() => loadLetters())
               {{ letter.published ? 'Published' : 'Draft' }}
             </span>
             <p class="letter-photos">{{ letter.angle_photos?.length || 0 }} photos</p>
+            <p v-if="analyticsFor(letter.id)" class="letter-view-summary">
+              {{ analyticsFor(letter.id)?.total_opens }} opens
+              <span aria-hidden="true">&middot;</span>
+              {{ analyticsFor(letter.id)?.unique_viewers }} viewers
+            </p>
+            <p v-else-if="!analyticsLoading && !analyticsError" class="letter-view-summary">No views yet</p>
           </div>
         </div>
       </div>
@@ -663,6 +764,74 @@ onMounted(() => loadLetters())
         <span :class="activeLetter.published ? 'badge-published' : 'badge-draft'">
           {{ activeLetter.published ? 'Published' : 'Draft' }}
         </span>
+      </div>
+
+      <div class="detail-section letter-analytics-section">
+        <div class="letter-analytics-heading">
+          <div>
+            <h3>Letter Analytics</h3>
+            <p>Meaningful visits and interactions from this published letter.</p>
+          </div>
+          <button class="refresh-btn" type="button" :disabled="analyticsLoading" @click="loadLetterAnalytics">
+            {{ analyticsLoading ? 'Refreshing...' : 'Refresh' }}
+          </button>
+        </div>
+
+        <p v-if="analyticsError" class="letter-analytics-error">{{ analyticsError }}</p>
+
+        <template v-else>
+          <div class="letter-analytics-metrics">
+            <div class="letter-analytics-metric">
+              <span>Opens</span>
+              <strong>{{ analyticsFor(activeLetter.id)?.total_opens || 0 }}</strong>
+            </div>
+            <div class="letter-analytics-metric">
+              <span>Unique viewers</span>
+              <strong>{{ analyticsFor(activeLetter.id)?.unique_viewers || 0 }}</strong>
+            </div>
+            <div class="letter-analytics-metric">
+              <span>Completed visits</span>
+              <strong>{{ analyticsFor(activeLetter.id)?.completed_views || 0 }}</strong>
+            </div>
+            <div class="letter-analytics-metric">
+              <span>Completion rate</span>
+              <strong>{{ completionRate(analyticsFor(activeLetter.id)) }}%</strong>
+            </div>
+          </div>
+
+          <div class="letter-analytics-meta">
+            <span>Last viewed</span>
+            <strong>{{ formatLastViewed(analyticsFor(activeLetter.id)?.last_viewed_at) }}</strong>
+          </div>
+
+          <div class="letter-feature-metrics" aria-label="Feature engagement">
+            <span>Memories <strong>{{ analyticsFor(activeLetter.id)?.memories_views || 0 }}</strong></span>
+            <span>360 view <strong>{{ analyticsFor(activeLetter.id)?.bouquet_360_views || 0 }}</strong></span>
+            <span>Music plays <strong>{{ analyticsFor(activeLetter.id)?.music_plays || 0 }}</strong></span>
+            <span>Replays <strong>{{ analyticsFor(activeLetter.id)?.replayed_views || 0 }}</strong></span>
+          </div>
+
+          <div class="letter-screen-journey">
+            <div class="letter-screen-journey-title">
+              <h4>Page Journey</h4>
+              <span>Views per page</span>
+            </div>
+            <div
+              v-for="(label, index) in LETTER_SCREEN_LABELS"
+              :key="label"
+              class="letter-screen-row"
+            >
+              <span class="letter-screen-label">{{ index + 1 }}. {{ label }}</span>
+              <span class="letter-screen-track">
+                <span
+                  class="letter-screen-fill"
+                  :style="{ width: `${screenBarWidth(analyticsFor(activeLetter.id), index + 1)}%` }"
+                ></span>
+              </span>
+              <strong>{{ screenViewCount(analyticsFor(activeLetter.id), index + 1) }}</strong>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- Edit Fields -->

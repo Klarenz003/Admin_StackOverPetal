@@ -37,7 +37,7 @@ const pageTitle = computed(() => {
 })
 
 const navItems = computed(() => [
-  { to: '/costing', icon: 'PHP', label: 'Costing & Profit' },
+  { to: '/costing', icon: '💰', label: 'Costing & Profit' },
   { to: '/overview', icon: '📊', label: 'Overview' },
   { to: '/orders', icon: '📦', label: 'Orders', badge: admin.pendingOrders },
   { to: '/messages', icon: '💬', label: 'Messages', badge: admin.unreadMessages },
@@ -46,8 +46,8 @@ const navItems = computed(() => [
   { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
   { to: '/transactions', icon: '💳', label: 'Transactions' },
   { to: '/letters', icon: '💌', label: 'Letters' },
-  { to: '/investor-access', icon: 'ID', label: 'Investor Access' },
-  { to: '/investor-letters', icon: 'QR', label: 'Investor Letters' },
+  { to: '/investor-access', icon: '🤵', label: 'Investor Access' },
+  { to: '/investor-letters', icon: '✒️', label: 'Investor Letters' },
 ])
 
 function logout() {
