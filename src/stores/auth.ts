@@ -79,10 +79,9 @@ export const useAuthStore = defineStore('auth', () => {
     profile.value = null
   }
 
-  const isAdmin = computed(() => profile.value?.role === 'admin' && Boolean(profile.value.adminMarket))
-  const isOwner = computed(() => isAdmin.value && profile.value?.adminMarket === 'ALL')
+  const isOwner = computed(() => profile.value?.role === 'admin' && profile.value?.adminMarket === 'ALL')
   const marketCode = computed(() => profile.value?.adminMarket || null)
   const marketLabel = computed(() => marketCode.value === 'CA' ? 'Canada' : marketCode.value === 'PH' ? 'Philippines' : 'All markets')
 
-  return { loggedIn, initialized, profile, isAdmin, isOwner, marketCode, marketLabel, initAuth, login, logout, loadProfile }
+  return { loggedIn, initialized, profile, isOwner, marketCode, marketLabel, initAuth, login, logout, loadProfile }
 })
