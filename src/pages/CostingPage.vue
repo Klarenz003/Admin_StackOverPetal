@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
+import { useAdminStore } from '@/stores/admin'
+
+const admin = useAdminStore()
 
 interface Expense { id: string; expense_date: string; category: string; description: string; amount: number; note: string }
 interface RevenueOrder { total: string | number; status: string }
@@ -14,7 +17,7 @@ const form = reactive({ expense_date: new Date().toISOString().slice(0, 10), cat
 const monthStart = computed(() => `${selectedMonth.value}-01`)
 const nextMonthStart = computed(() => { const d = new Date(`${monthStart.value}T00:00:00`); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10) })
 const parseMoney = (value: string | number) => { const parsed = Number(String(value || '').replace(/[^0-9.-]/g, '')); return Number.isFinite(parsed) ? parsed : 0 }
-const money = (value: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value)
+const money = (value: number) => admin.formatMoney(value)
 const revenue = computed(() => orders.value
   .filter(o => !['pending', 'rejected'].includes(String(o.status || '').toLowerCase()))
   .reduce((sum, o) => sum + parseMoney(o.total), 0))
@@ -27,24 +30,24 @@ const budgetUsed = computed(() => monthlyBudget.value ? Math.min(totalExpenses.v
 async function loadCosting() {
   loading.value = true; errorMessage.value = ''
   const [expenseResult, budgetResult, orderResult] = await Promise.all([
-    supabase.from('business_expenses').select('*').gte('expense_date', monthStart.value).lt('expense_date', nextMonthStart.value).order('expense_date', { ascending: false }),
-    supabase.from('business_budgets').select('amount').eq('month_start', monthStart.value).maybeSingle(),
-    supabase.from('orders').select('total, status').gte('created_at', `${monthStart.value}T00:00:00`).lt('created_at', `${nextMonthStart.value}T00:00:00`),
+    supabase.from('business_expenses').select('*').eq('market_code', admin.effectiveMarket).gte('expense_date', monthStart.value).lt('expense_date', nextMonthStart.value).order('expense_date', { ascending: false }),
+    supabase.from('business_budgets').select('amount').eq('market_code', admin.effectiveMarket).eq('month_start', monthStart.value).maybeSingle(),
+    supabase.from('orders').select('total, status').eq('market_code', admin.effectiveMarket).gte('created_at', `${monthStart.value}T00:00:00`).lt('created_at', `${nextMonthStart.value}T00:00:00`),
   ])
   errorMessage.value = expenseResult.error?.message || budgetResult.error?.message || orderResult.error?.message || ''
   expenses.value = (expenseResult.data || []) as Expense[]; monthlyBudget.value = Number(budgetResult.data?.amount || 0); orders.value = (orderResult.data || []) as RevenueOrder[]; loading.value = false
 }
-async function saveBudget() { saving.value = true; const { error } = await supabase.from('business_budgets').upsert({ month_start: monthStart.value, amount: Math.max(Number(monthlyBudget.value || 0), 0), updated_at: new Date().toISOString() }); saving.value = false; if (error) errorMessage.value = error.message }
+async function saveBudget() { saving.value = true; const { error } = await supabase.from('business_budgets').upsert({ market_code: admin.effectiveMarket, currency_code: admin.currencyCode, month_start: monthStart.value, amount: Math.max(Number(monthlyBudget.value || 0), 0), updated_at: new Date().toISOString() }, { onConflict: 'market_code,month_start' }); saving.value = false; if (error) errorMessage.value = error.message }
 async function addExpense() {
   if (!form.description.trim() || Number(form.amount) <= 0) { errorMessage.value = 'Enter a description and an amount greater than zero.'; return }
   saving.value = true
-  const { error } = await supabase.from('business_expenses').insert({ expense_date: form.expense_date, category: form.category, description: form.description.trim(), amount: Number(form.amount), note: form.note.trim() })
+  const { error } = await supabase.from('business_expenses').insert({ market_code: admin.effectiveMarket, currency_code: admin.currencyCode, expense_date: form.expense_date, category: form.category, description: form.description.trim(), amount: Number(form.amount), note: form.note.trim() })
   saving.value = false
   if (error) { errorMessage.value = error.message; return }
   form.description = ''; form.amount = 0; form.note = ''; await loadCosting()
 }
 async function removeExpense(expense: Expense) { if (!confirm(`Remove "${expense.description}"?`)) return; const { error } = await supabase.from('business_expenses').delete().eq('id', expense.id); if (error) errorMessage.value = error.message; else expenses.value = expenses.value.filter(e => e.id !== expense.id) }
-watch(selectedMonth, () => { form.expense_date = `${selectedMonth.value}-01`; loadCosting() })
+watch([selectedMonth, () => admin.effectiveMarket], () => { form.expense_date = `${selectedMonth.value}-01`; loadCosting() })
 onMounted(loadCosting)
 </script>
 

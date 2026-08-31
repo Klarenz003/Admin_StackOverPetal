@@ -2910,3 +2910,33 @@ body {
   .letter-analytics-meta, .letter-feature-metrics { padding-inline: 16px; }
   .letter-screen-row { gap: 8px; grid-template-columns: 76px minmax(60px, 1fr) 24px; }
 }
+.admin-market-select,
+.admin-market-badge {
+  align-items: center;
+  background: #f7fbf8;
+  border: 1px solid #cfe0d6;
+  border-radius: 8px;
+  color: #416653;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+.admin-market-select select {
+  background: transparent;
+  border: 0;
+  color: #2f5140;
+  cursor: pointer;
+  font: inherit;
+  outline: 0;
+}
+
+@media (max-width: 720px) {
+  .admin-market-select span,
+  .admin-market-badge {
+    font-size: 11px;
+  }
+}

@@ -31,6 +31,7 @@ const pageTitle = computed(() => {
     letters: 'Letters',
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
+    'staff-accounts': 'Admin Accounts',
   }
 
   return labels[String(route.name || '')] || admin.tabLabel
@@ -46,8 +47,11 @@ const navItems = computed(() => [
   { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
   { to: '/transactions', icon: '💳', label: 'Transactions' },
   { to: '/letters', icon: '💌', label: 'Letters' },
-  { to: '/investor-access', icon: '🤵', label: 'Investor Access' },
-  { to: '/investor-letters', icon: '✒️', label: 'Investor Letters' },
+  ...(auth.isOwner ? [
+    { to: '/investor-access', icon: 'IA', label: 'Investor Access' },
+    { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },
+  ] : []),
+  ...(auth.isOwner ? [{ to: '/staff-accounts', icon: 'ID', label: 'Admin Accounts' }] : []),
 ])
 
 function logout() {
@@ -184,6 +188,17 @@ onBeforeUnmount(() => {
           <h1>{{ pageTitle }}</h1>
         </div>
         <div class="topbar-actions">
+          <label v-if="auth.isOwner" class="admin-market-select">
+            <span>Store</span>
+            <select
+              :value="admin.selectedMarket"
+              @change="admin.selectMarket(($event.target as HTMLSelectElement).value as 'PH' | 'CA')"
+            >
+              <option value="PH">Philippines</option>
+              <option value="CA">Canada</option>
+            </select>
+          </label>
+          <span v-else class="admin-market-badge">{{ auth.marketLabel }}</span>
           <span class="last-refresh">Updated {{ admin.lastRefresh }}</span>
           <button class="refresh-btn" @click="admin.loadData()">Refresh</button>
         </div>

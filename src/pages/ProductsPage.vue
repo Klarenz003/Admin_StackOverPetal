@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
+import { useAdminStore } from '@/stores/admin'
+
+const admin = useAdminStore()
 
 interface Product {
   id: string
+  marketProductId: string
   name: string
   price: number
   sale_price: number | null
@@ -58,10 +62,25 @@ const form = ref({
 async function loadProducts() {
   loading.value = true
   const { data } = await supabase
-    .from('products')
-    .select('*')
-    .order('order', { ascending: true })
-  products.value = data || []
+    .from('product_markets')
+    .select('id, product_id, price, sale_price, stock, featured, pre_order_allowed, prep_days, delivery_restrictions, sort_order, products(name, image, category, badge)')
+    .eq('market_code', admin.effectiveMarket)
+    .order('sort_order', { ascending: true })
+  products.value = (data || []).map((row: any) => ({
+    id: row.product_id,
+    marketProductId: row.id,
+    name: row.products?.name || '',
+    image: row.products?.image || '',
+    category: row.products?.category || 'Romance',
+    badge: row.products?.badge || null,
+    price: Number(row.price || 0),
+    sale_price: row.sale_price === null ? null : Number(row.sale_price),
+    stock: Number(row.stock || 0),
+    featured: !!row.featured,
+    pre_order_allowed: row.pre_order_allowed ?? true,
+    prep_days: row.prep_days ?? 5,
+    delivery_restrictions: row.delivery_restrictions || '',
+  }))
   loading.value = false
 }
 
@@ -148,13 +167,18 @@ async function saveProduct() {
     return
   }
 
-const payload = {
+const sharedPayload = {
   name: form.value.name,
   price: form.value.price,
-  sale_price: form.value.sale_price && form.value.sale_price > 0 ? form.value.sale_price : null,
   image: form.value.image,
   category: form.value.category,
   badge: form.value.badge || null,
+  stock: form.value.stock,
+}
+const marketPayload = {
+  market_code: admin.effectiveMarket,
+  price: form.value.price,
+  sale_price: form.value.sale_price && form.value.sale_price > 0 ? form.value.sale_price : null,
   stock: form.value.stock,
   featured: form.value.featured,
   pre_order_allowed: form.value.pre_order_allowed,
@@ -164,21 +188,37 @@ const payload = {
 
   if (editingId.value) {
     // Update
-    const { error } = await supabase
+    const { error: productError } = await supabase
       .from('products')
-      .update(payload)
+      .update(sharedPayload)
       .eq('id', editingId.value)
-    if (error) {
+    const marketProduct = products.value.find(product => product.id === editingId.value)
+    const { error: marketError } = await supabase
+      .from('product_markets')
+      .update(marketPayload)
+      .eq('id', marketProduct?.marketProductId || '')
+    if (productError || marketError) {
       alert('Error updating product')
       return
     }
   } else {
     // Insert
-    const { error } = await supabase
+    const { data: createdProduct, error } = await supabase
       .from('products')
-      .insert([payload])
-    if (error) {
+      .insert([sharedPayload])
+      .select('id')
+      .single()
+    if (error || !createdProduct) {
       alert('Error creating product')
+      return
+    }
+    const { error: marketError } = await supabase.from('product_markets').insert({
+      ...marketPayload,
+      product_id: createdProduct.id,
+      active: true,
+    })
+    if (marketError) {
+      alert('Product created, but its market availability could not be saved')
       return
     }
   }
@@ -200,8 +240,9 @@ function editProduct(product: Product) {
 }
 
 async function deleteProduct(id: string) {
-  if (!confirm('Delete this product?')) return
-  const { error } = await supabase.from('products').delete().eq('id', id)
+  if (!confirm(`Remove this product from the ${admin.marketLabel} store?`)) return
+  const product = products.value.find(item => item.id === id)
+  const { error } = await supabase.from('product_markets').delete().eq('id', product?.marketProductId || '')
   if (error) {
     alert('Error deleting product')
     return
@@ -212,9 +253,9 @@ async function deleteProduct(id: string) {
 async function adjustStock(product: Product, delta: number) {
   const nextStock = Math.max(0, Number(product.stock || 0) + delta)
   const { error } = await supabase
-    .from('products')
+    .from('product_markets')
     .update({ stock: nextStock })
-    .eq('id', product.id)
+    .eq('id', product.marketProductId)
 
   if (error) {
     alert('Error updating stock')
@@ -268,6 +309,7 @@ function resetForm() {
 onMounted(() => {
   loadProducts()
 })
+watch(() => admin.effectiveMarket, () => { resetForm(); loadProducts() })
 
 
 
@@ -294,9 +336,9 @@ async function dragEnd() {
   // Save new order to Supabase
   for (let i = 0; i < products.value.length; i++) {
     await supabase
-      .from('products')
-      .update({ order: i })
-      .eq('id', products.value[i].id)
+      .from('product_markets')
+      .update({ sort_order: i })
+      .eq('id', products.value[i].marketProductId)
   }
   draggedIndex.value = null
 }
@@ -419,10 +461,10 @@ async function dragEnd() {
         <td>{{ product.category }}</td>
         <td>
           <div v-if="product.sale_price && product.sale_price > 0 && product.sale_price < product.price" class="admin-sale-price">
-            <strong>₱{{ product.sale_price.toLocaleString() }}</strong>
-            <span>₱{{ product.price.toLocaleString() }}</span>
+            <strong>{{ admin.formatMoney(product.sale_price) }}</strong>
+            <span>{{ admin.formatMoney(product.price) }}</span>
           </div>
-          <span v-else>₱{{ product.price.toLocaleString() }}</span>
+          <span v-else>{{ admin.formatMoney(product.price) }}</span>
         </td>
         <td>
           <div class="stock-control">

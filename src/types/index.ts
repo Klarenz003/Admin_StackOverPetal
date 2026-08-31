@@ -45,6 +45,8 @@ export interface Order {
   letterPublished?: boolean
   adminNote?: string
   statusHistory?: OrderStatusHistory[]
+  marketCode: 'PH' | 'CA'
+  currencyCode: 'PHP' | 'CAD'
 }
 
 export interface Message {

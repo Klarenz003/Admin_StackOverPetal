@@ -14,7 +14,7 @@ const admin = useAdminStore()
       </div>
       <div class="stat-card pink">
         <div class="label">Revenue</div>
-        <div class="value">₱{{ admin.totalRevenue }}</div>
+        <div class="value">{{ admin.formatMoney(admin.totalRevenue) }}</div>
         <div class="sub">verified payments</div>
       </div>
       <div class="stat-card gold">
@@ -47,7 +47,7 @@ const admin = useAdminStore()
       </div>
       <div class="stat-card green">
         <div class="label">Avg Order</div>
-        <div class="value">₱{{ admin.avgOrder }}</div>
+        <div class="value">{{ admin.formatMoney(admin.avgOrder) }}</div>
         <div class="sub">all orders</div>
       </div>
     </div>

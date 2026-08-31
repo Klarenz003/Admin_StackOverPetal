@@ -3,8 +3,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Order, Message, AdminTab } from '@/types'
 import { supabase } from '@/supabaseClient'
+import { useAuthStore } from '@/stores/auth'
 
 export const useAdminStore = defineStore('admin', () => {
+  const auth = useAuthStore()
 
   // ── State ──────────────────────────────────────────────────────
   const tab         = ref<AdminTab>('overview')
@@ -15,6 +17,13 @@ export const useAdminStore = defineStore('admin', () => {
   const toast       = ref('')
   let   _toastTimer = 0
   let   _refreshInterval = 0
+  const selectedMarket = ref<'PH' | 'CA'>('PH')
+  const effectiveMarket = computed<'PH' | 'CA'>(() =>
+    auth.marketCode === 'CA' ? 'CA' : auth.marketCode === 'PH' ? 'PH' : selectedMarket.value
+  )
+  const marketLabel = computed(() => effectiveMarket.value === 'CA' ? 'Canada' : 'Philippines')
+  const currencyCode = computed(() => effectiveMarket.value === 'CA' ? 'CAD' : 'PHP')
+  const currencySymbol = computed(() => effectiveMarket.value === 'CA' ? 'CA$' : '\u20b1')
 
   // Filters — orders
   const orderSearch    = ref('')
@@ -83,13 +92,13 @@ export const useAdminStore = defineStore('admin', () => {
   const totalRevenue = computed(() => {
     const sum = orders.value
       .filter(o => o.paymentStatus === 'Verified')
-      .reduce((a, o) => a + parseFloat(o.total.replace(/[₱$,]/g, '')), 0)
+      .reduce((a, o) => a + (Number(o.total.replace(/[^0-9.-]/g, '')) || 0), 0)
     return sum.toFixed(2)
   })
 
   const avgOrder = computed(() => {
     if (!orders.value.length) return '0.00'
-    const sum = orders.value.reduce((a, o) => a + parseFloat(o.total.replace(/[₱$,]/g, '')), 0)
+    const sum = orders.value.reduce((a, o) => a + (Number(o.total.replace(/[^0-9.-]/g, '')) || 0), 0)
     return (sum / orders.value.length).toFixed(2)
   })
 
@@ -137,6 +146,7 @@ export const useAdminStore = defineStore('admin', () => {
       supabase
         .from('orders')
         .select('*')
+        .eq('market_code', effectiveMarket.value)
         .order('created_at', { ascending: false }),
       supabase
         .from('messages')
@@ -150,8 +160,9 @@ export const useAdminStore = defineStore('admin', () => {
         .select('*')
         .order('created_at', { ascending: true }),
       supabase
-        .from('products')
-        .select('id, name, stock, pre_order_allowed, prep_days, delivery_restrictions'),
+        .from('product_markets')
+        .select('id, product_id, market_code, price, sale_price, stock, featured, active, pre_order_allowed, prep_days, delivery_restrictions, products(name)')
+        .eq('market_code', effectiveMarket.value),
     ])
 
     const lettersByOrder = new Map(
@@ -194,9 +205,16 @@ export const useAdminStore = defineStore('admin', () => {
         note: item.note,
         createdAt: item.created_at,
       })),
+      marketCode:     o.market_code || 'PH',
+      currencyCode:   o.currency_code || (o.market_code === 'CA' ? 'CAD' : 'PHP'),
     }))
 
-    products.value = productsData || []
+    products.value = (productsData || []).map((marketProduct: any) => ({
+      ...marketProduct,
+      id: marketProduct.product_id,
+      marketProductId: marketProduct.id,
+      name: marketProduct.products?.name || 'Unnamed product',
+    }))
 
     messages.value = (msgsData || []).map(m => ({
       id:        m.id,
@@ -522,6 +540,23 @@ export const useAdminStore = defineStore('admin', () => {
     })
   }
 
+  function formatMoney(amount: number | string) {
+    const value = typeof amount === 'number' ? amount : Number(amount || 0)
+    return new Intl.NumberFormat(effectiveMarket.value === 'CA' ? 'en-CA' : 'en-PH', {
+      style: 'currency',
+      currency: currencyCode.value,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(value) ? value : 0)
+  }
+
+  async function selectMarket(market: 'PH' | 'CA') {
+    if (!auth.isOwner) return
+    selectedMarket.value = market
+    activeOrder.value = null
+    await loadData()
+  }
+
   function paymentBadgeClass(s: string) {
     return {
       badge: true,
@@ -587,6 +622,7 @@ export const useAdminStore = defineStore('admin', () => {
   return {
     // state
     tab, orders, messages, products, lastRefresh, toast,
+    selectedMarket, effectiveMarket, marketLabel, currencyCode, currencySymbol,
     orderSearch, orderPayFilter, orderDelFilter,
     msgSearch, msgReadFilter,
     txSearch, txPayFilter,
@@ -600,7 +636,7 @@ export const useAdminStore = defineStore('admin', () => {
     loadData, saveOrders, saveMessages, saveFromModal,
     openOrder, openMessage, toggleRead,
     viewProof, approvePayment, rejectPayment, requestClearerProof,
-    copyReply, showToast, formatDate,
+    copyReply, showToast, formatDate, formatMoney, selectMarket,
     isPreorder, orderReference, letterUrl, copyText,
     customerTrackUrl, orderEmailSubject, orderEmailBody,
     normalizeOrderItemImage,

@@ -8,7 +8,7 @@ const admin = useAdminStore()
     <div class="stats-row" style="grid-template-columns: repeat(3, 1fr)">
       <div class="stat-card green">
         <div class="label">Total Revenue</div>
-        <div class="value">₱{{ admin.totalRevenue }}</div>
+        <div class="value">{{ admin.formatMoney(admin.totalRevenue) }}</div>
         <div class="sub">from verified orders</div>
       </div>
       <div class="stat-card gold">
@@ -18,7 +18,7 @@ const admin = useAdminStore()
       </div>
       <div class="stat-card pink">
         <div class="label">Avg Order Value</div>
-        <div class="value">₱{{ admin.avgOrder }}</div>
+        <div class="value">{{ admin.formatMoney(admin.avgOrder) }}</div>
         <div class="sub">across all orders</div>
       </div>
     </div>

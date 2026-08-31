@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
+import { useAdminStore } from '@/stores/admin'
+
+const admin = useAdminStore()
 
 type DeliverySlot = {
   delivery_date: string
@@ -41,7 +44,8 @@ async function loadSlots() {
   const loaded: DeliverySlot[] = []
 
   for (const date of upcoming) {
-    const { data, error } = await supabase.rpc('get_delivery_date_availability', {
+    const { data, error } = await supabase.rpc('get_market_delivery_date_availability', {
+      p_market_code: admin.effectiveMarket,
       p_delivery_date: date,
     })
     if (!error && data?.[0]) loaded.push(data[0])
@@ -55,7 +59,8 @@ async function saveCapacity() {
   if (!form.value.date) return
   saving.value = true
   statusMessage.value = ''
-  const { error } = await supabase.rpc('set_delivery_date_capacity', {
+  const { error } = await supabase.rpc('set_market_delivery_date_capacity', {
+    p_market_code: admin.effectiveMarket,
     p_delivery_date: form.value.date,
     p_max_deliveries: form.value.max,
   })
@@ -87,6 +92,7 @@ onMounted(() => {
   form.value.date = minDate.value
   loadSlots()
 })
+watch(() => admin.effectiveMarket, loadSlots)
 </script>
 
 <template>

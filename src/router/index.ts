@@ -17,8 +17,9 @@ const router = createRouter({
         { path: 'delivery-slots', name: 'delivery-slots', component: () => import('@/pages/DeliveryCapacityPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
         { path: 'costing', name: 'costing', component: () => import('@/pages/CostingPage.vue') },
-        { path: 'investor-access', name: 'investor-access', component: () => import('@/pages/InvestorAccessPage.vue') },
-        { path: 'investor-letters', name: 'investor-letters', component: () => import('@/pages/InvestorLettersPage.vue') },
+        { path: 'investor-access', name: 'investor-access', component: () => import('@/pages/InvestorAccessPage.vue'), meta: { ownerOnly: true } },
+        { path: 'investor-letters', name: 'investor-letters', component: () => import('@/pages/InvestorLettersPage.vue'), meta: { ownerOnly: true } },
+        { path: 'staff-accounts', name: 'staff-accounts', component: () => import('@/pages/StaffAccountsPage.vue'), meta: { ownerOnly: true } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -33,6 +34,9 @@ router.beforeEach(async (to) => {
     return { name: 'login' }
   }
   if (to.name === 'login' && auth.loggedIn) {
+    return { name: 'overview' }
+  }
+  if (to.meta.ownerOnly && !auth.isOwner) {
     return { name: 'overview' }
   }
 })
