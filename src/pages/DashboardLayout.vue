@@ -43,10 +43,10 @@ const navItems = computed(() => [
   { to: '/orders', icon: '📦', label: 'Orders', badge: admin.pendingOrders },
   { to: '/messages', icon: '💬', label: 'Messages', badge: admin.unreadMessages },
   { to: '/products', icon: '🌸', label: 'Products' },
-  { to: '/gallery', icon: '📸', label: 'Gallery' },
+  ...(auth.isAdmin ? [{ to: '/gallery', icon: '📸', label: 'Gallery' }] : []),
   { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
   { to: '/transactions', icon: '💳', label: 'Transactions' },
-  { to: '/letters', icon: '💌', label: 'Letters' },
+  ...(auth.isOwner ? [{ to: '/letters', icon: '💌', label: 'Letters' }] : []),
   ...(auth.isOwner ? [
     { to: '/investor-access', icon: 'IA', label: 'Investor Access' },
     { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },

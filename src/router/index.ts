@@ -11,9 +11,9 @@ const router = createRouter({
         { path: 'overview',     name: 'overview',     component: () => import('@/pages/OverviewPage.vue')     },
         { path: 'orders',       name: 'orders',       component: () => import('@/pages/OrdersPage.vue')       },
         { path: 'messages',     name: 'messages',     component: () => import('@/pages/MessagesPage.vue')     },
-        { path: 'letters', name: 'letters', component: () => import('@/pages/LettersPage.vue') },
+        { path: 'letters', name: 'letters', component: () => import('@/pages/LettersPage.vue'), meta: { ownerOnly: true } },
         { path: 'products', name: 'products', component: () => import('@/pages/ProductsPage.vue') },
-        { path: 'gallery', name: 'gallery', component: () => import('@/pages/GalleryPage.vue') },
+        { path: 'gallery', name: 'gallery', component: () => import('@/pages/GalleryPage.vue'), meta: { adminOnly: true } },
         { path: 'delivery-slots', name: 'delivery-slots', component: () => import('@/pages/DeliveryCapacityPage.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/pages/TransactionsPage.vue') },
         { path: 'costing', name: 'costing', component: () => import('@/pages/CostingPage.vue') },
@@ -37,6 +37,9 @@ router.beforeEach(async (to) => {
     return { name: 'overview' }
   }
   if (to.meta.ownerOnly && !auth.isOwner) {
+    return { name: 'overview' }
+  }
+  if (to.meta.adminOnly && !auth.isAdmin) {
     return { name: 'overview' }
   }
 })
