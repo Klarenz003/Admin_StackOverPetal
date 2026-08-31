@@ -58,7 +58,7 @@ async function createStaffAccount() {
   if (!canSubmit.value) return
   creating.value = true
   try {
-    const { error: functionError } = await supabase.functions.invoke('create-investor-access', {
+    const { data, error: functionError } = await supabase.functions.invoke('create-investor-access', {
       body: {
         accountType: 'admin', adminMarket: form.adminMarket,
         fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(),
@@ -66,7 +66,7 @@ async function createStaffAccount() {
       },
     })
     if (functionError) throw functionError
-    success.value = `${form.adminMarket === 'CA' ? 'Canada' : 'Philippines'} admin access created.`
+    success.value = `${form.adminMarket === 'CA' ? 'Canada' : 'Philippines'} admin access ${data?.restored ? 'restored' : 'created'}.`
     form.fullName = ''; form.email = ''; form.phone = ''; form.password = ''; form.confirmPassword = ''
     await loadStaff()
   } catch (err) {
