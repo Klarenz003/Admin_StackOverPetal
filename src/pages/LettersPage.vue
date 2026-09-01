@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
+import { useAdminStore } from '@/stores/admin'
 
 interface Letter {
   id: string
@@ -15,6 +16,7 @@ interface Letter {
   bouquet_image_url: string
   published: boolean
   template: string
+  market_code: 'PH' | 'CA'
   created_at: string
 }
 
@@ -50,6 +52,9 @@ const showQR = ref(false)
 const QR_LOGO_SRC = '/images/qrlogo.png'
 const PETAL_MESSAGE_LIMIT = 60
 const PETAL_COUNT = 6
+const admin = useAdminStore()
+const activeMarket = computed<'PH' | 'CA'>(() => admin.effectiveMarket)
+const activeMarketLabel = computed(() => activeMarket.value === 'CA' ? 'Canada' : 'Philippines')
 const LETTER_SCREEN_LABELS = [
   'Welcome',
   'Bloom',
@@ -151,6 +156,7 @@ async function loadLetters() {
   const { data, error } = await supabase
     .from('letters')
     .select('*')
+    .eq('market_code', activeMarket.value)
     .order('created_at', { ascending: false })
   if (error) console.error(error)
   letters.value = data || []
@@ -173,6 +179,7 @@ async function createStandaloneLetter() {
     .from('letters')
     .insert({
       order_id: null,
+      market_code: activeMarket.value,
       recipient: 'Recipient Name',
       sender: 'Stack Petals',
       message: 'Write your custom letter message here.',
@@ -686,6 +693,11 @@ async function unpublishLetter() {
 }
 
 onMounted(() => loadLetters())
+
+watch(activeMarket, () => {
+  activeLetter.value = null
+  loadLetters()
+})
 </script>
 
 <template>
@@ -695,8 +707,8 @@ onMounted(() => loadLetters())
     <div v-if="!activeLetter">
       <div class="letters-header">
         <div>
-          <h2>Love Letters</h2>
-          <span class="letters-count">{{ letters.length }} total</span>
+          <h2>{{ activeMarketLabel }} Letters</h2>
+          <span class="letters-count">{{ letters.length }} in {{ activeMarketLabel }}</span>
         </div>
         <button class="btn-save letters-create-btn" type="button" :disabled="creatingLetter" @click="createStandaloneLetter">
           {{ creatingLetter ? 'Creating...' : '+ New Letter' }}
@@ -707,7 +719,7 @@ onMounted(() => loadLetters())
 
       <div v-else-if="letters.length === 0" class="empty-state">
         <div class="emoji">💌</div>
-        <p>No letters yet. Letters appear here when customers include them in their orders.</p>
+        <p>No {{ activeMarketLabel }} letters yet. Letters appear here when customers include them in their orders.</p>
       </div>
 
       <div v-else class="letters-list">
@@ -724,6 +736,7 @@ onMounted(() => loadLetters())
               <p class="letter-sender">From: <strong>{{ letter.sender }}</strong></p>
               <p class="letter-order" v-if="letter.order_id">Order: <code>{{ letter.order_id.slice(0, 8) }}...</code></p>
               <p class="letter-order" v-else>Standalone letter</p>
+              <p class="letter-order">Store: {{ letter.market_code === 'CA' ? 'Canada' : 'Philippines' }}</p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>
             </div>
           </div>

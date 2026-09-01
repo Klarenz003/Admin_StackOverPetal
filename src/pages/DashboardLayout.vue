@@ -47,7 +47,7 @@ const navItems = computed(() => [
   ...(auth.isOwner ? [{ to: '/gallery', icon: '📸', label: 'Gallery' }] : []),
   { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
   { to: '/transactions', icon: '💳', label: 'Transactions' },
-  ...(auth.isOwner ? [{ to: '/letters', icon: '💌', label: 'Letters' }] : []),
+  { to: '/letters', icon: '💌', label: 'Letters' },
   ...(auth.isOwner ? [
     { to: '/investor-access', icon: 'IA', label: 'Investor Access' },
     { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },
