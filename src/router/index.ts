@@ -20,6 +20,7 @@ const router = createRouter({
         { path: 'investor-access', name: 'investor-access', component: () => import('@/pages/InvestorAccessPage.vue'), meta: { ownerOnly: true } },
         { path: 'investor-letters', name: 'investor-letters', component: () => import('@/pages/InvestorLettersPage.vue'), meta: { ownerOnly: true } },
         { path: 'staff-accounts', name: 'staff-accounts', component: () => import('@/pages/StaffAccountsPage.vue'), meta: { ownerOnly: true } },
+        { path: 'chatbot-knowledge', name: 'chatbot-knowledge', component: () => import('@/pages/ChatbotKnowledgePage.vue'), meta: { ownerOnly: true } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

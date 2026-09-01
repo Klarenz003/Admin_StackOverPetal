@@ -32,6 +32,7 @@ const pageTitle = computed(() => {
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
     'staff-accounts': 'Admin Accounts',
+    'chatbot-knowledge': 'Chatbot Knowledge',
   }
 
   return labels[String(route.name || '')] || admin.tabLabel
@@ -52,6 +53,7 @@ const navItems = computed(() => [
     { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },
   ] : []),
   ...(auth.isOwner ? [{ to: '/staff-accounts', icon: 'ID', label: 'Admin Accounts' }] : []),
+  ...(auth.isOwner ? [{ to: '/chatbot-knowledge', icon: 'AI', label: 'Chatbot Knowledge' }] : []),
 ])
 
 function logout() {
