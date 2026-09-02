@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 
 interface Letter {
   id: string
@@ -53,6 +54,7 @@ const QR_LOGO_SRC = '/images/qrlogo.png'
 const PETAL_MESSAGE_LIMIT = 60
 const PETAL_COUNT = 6
 const admin = useAdminStore()
+const auth = useAuthStore()
 const activeMarket = computed<'PH' | 'CA'>(() => admin.effectiveMarket)
 const activeMarketLabel = computed(() => activeMarket.value === 'CA' ? 'Canada' : 'Philippines')
 const LETTER_SCREEN_LABELS = [
@@ -101,6 +103,13 @@ function screenBarWidth(summary: LetterAnalyticsSummary | null, screen: number) 
 }
 
 async function loadLetterAnalytics() {
+  if (!auth.isOwner) {
+    analyticsByLetter.value = {}
+    analyticsError.value = ''
+    analyticsLoading.value = false
+    return
+  }
+
   analyticsLoading.value = true
   analyticsError.value = ''
 
@@ -745,12 +754,14 @@ watch(activeMarket, () => {
               {{ letter.published ? 'Published' : 'Draft' }}
             </span>
             <p class="letter-photos">{{ letter.angle_photos?.length || 0 }} photos</p>
-            <p v-if="analyticsFor(letter.id)" class="letter-view-summary">
-              {{ analyticsFor(letter.id)?.total_opens }} opens
-              <span aria-hidden="true">&middot;</span>
-              {{ analyticsFor(letter.id)?.unique_viewers }} viewers
-            </p>
-            <p v-else-if="!analyticsLoading && !analyticsError" class="letter-view-summary">No views yet</p>
+            <template v-if="auth.isOwner">
+              <p v-if="analyticsFor(letter.id)" class="letter-view-summary">
+                {{ analyticsFor(letter.id)?.total_opens }} opens
+                <span aria-hidden="true">&middot;</span>
+                {{ analyticsFor(letter.id)?.unique_viewers }} viewers
+              </p>
+              <p v-else-if="!analyticsLoading && !analyticsError" class="letter-view-summary">No views yet</p>
+            </template>
           </div>
         </div>
       </div>
@@ -779,7 +790,7 @@ watch(activeMarket, () => {
         </span>
       </div>
 
-      <div class="detail-section letter-analytics-section">
+      <div v-if="auth.isOwner" class="detail-section letter-analytics-section">
         <div class="letter-analytics-heading">
           <div>
             <h3>Letter Analytics</h3>
