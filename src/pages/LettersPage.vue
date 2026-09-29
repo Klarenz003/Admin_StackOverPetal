@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
 import { useAdminStore } from '@/stores/admin'
 import { useAuthStore } from '@/stores/auth'
+import { LETTER_THEMES, normalizeTheme, getTheme, type LetterThemeId } from '@/utils/letterThemes'
 
 interface Letter {
   id: string
@@ -17,6 +18,8 @@ interface Letter {
   bouquet_image_url: string
   published: boolean
   template: string
+  letter_theme?: LetterThemeId | null
+  sympathy_mode?: 'support' | 'remembrance' | null
   market_code: 'PH' | 'CA'
   created_at: string
 }
@@ -47,6 +50,8 @@ const uploadingMemories = ref(false)
 const uploadingMusic = ref(false)
 const uploadingBouquetImage = ref(false)
 const publishing = ref(false)
+const saving = ref(false)
+const selectedTheme = computed(() => getTheme(activeLetter.value?.letter_theme, activeLetter.value?.sympathy_mode))
 const removingAnglePhotos = ref(false)
 const qrUrl = ref('')
 const showQR = ref(false)
@@ -156,6 +161,8 @@ function normalizeLetter(letter: Letter): Letter {
     angle_photos: Array.isArray(letter.angle_photos) ? [...letter.angle_photos] : [],
     music_url: letter.music_url || '',
     bouquet_image_url: letter.bouquet_image_url || '',
+    letter_theme: normalizeTheme(letter.letter_theme),
+    sympathy_mode: letter.sympathy_mode === 'remembrance' ? 'remembrance' : 'support',
   }
 }
 
@@ -199,6 +206,8 @@ async function createStandaloneLetter() {
       bouquet_image_url: '',
       published: false,
       template: 'default',
+      letter_theme: 'romance',
+      sympathy_mode: null,
     })
     .select('*')
     .single()
@@ -207,7 +216,7 @@ async function createStandaloneLetter() {
 
   if (error || !data) {
     console.error(error)
-    alert('Failed to create letter')
+    alert(letterSaveError(error))
     return
   }
 
@@ -221,25 +230,43 @@ function limitPetalMessage(index: number) {
 }
 
 // ── Save Edits ─────────────────────────────────────────────────────
+function letterSaveError(error: { code?: string; message?: string } | null) {
+  if (error?.code === 'PGRST204' || /letter_theme|sympathy_mode/.test(error?.message || '')) {
+    return 'Letter themes are not configured in the database yet. Apply the letter event themes migration from the storefront repo, then try again.'
+  }
+  return 'Could not save this letter. Your edits are still here; please try again.'
+}
+
+function letterEdits(letter: Letter) {
+  return {
+    recipient: letter.recipient,
+    sender: letter.sender,
+    message: letter.message,
+    petal_messages: normalizePetalMessages(letter.petal_messages),
+    memories: letter.memories,
+    angle_photos: letter.angle_photos,
+    music_url: letter.music_url || '',
+    bouquet_image_url: letter.bouquet_image_url || '',
+    letter_theme: normalizeTheme(letter.letter_theme),
+    sympathy_mode: letter.letter_theme === 'sympathy'
+      ? (letter.sympathy_mode === 'remembrance' ? 'remembrance' : 'support') : null,
+  }
+}
+
 async function saveLetter() {
-  if (!activeLetter.value) return
-  activeLetter.value.petal_messages = normalizePetalMessages(activeLetter.value.petal_messages)
-  const { error } = await supabase
-    .from('letters')
-    .update({
-      recipient:      activeLetter.value.recipient,
-      sender:         activeLetter.value.sender,
-      message:        activeLetter.value.message,
-      petal_messages: activeLetter.value.petal_messages,
-      memories:       activeLetter.value.memories,
-      angle_photos:   activeLetter.value.angle_photos,
-      music_url:      activeLetter.value.music_url || '',
-      bouquet_image_url: activeLetter.value.bouquet_image_url || '',
-    })
-    .eq('id', activeLetter.value.id)
-  if (error) { alert('Failed to save'); return }
-  alert('Saved!')
-  loadLetters()
+  if (!activeLetter.value || saving.value || publishing.value) return
+  saving.value = true
+  try {
+    const { error } = await supabase.from('letters')
+      .update(letterEdits(activeLetter.value)).eq('id', activeLetter.value.id)
+    if (error) { alert(letterSaveError(error)); return }
+    alert('Saved!')
+    await loadLetters()
+  } catch {
+    alert(letterSaveError(null))
+  } finally {
+    saving.value = false
+  }
 }
 
 // ── Upload Angle Photos ────────────────────────────────────────────
@@ -549,25 +576,22 @@ async function removeBouquetImage() {
 
 // ── Publish & Generate QR ──────────────────────────────────────────
 async function publishLetter() {
-  if (!activeLetter.value) return
-  if (activeLetter.value.angle_photos.length < 0) {
-    alert('Please upload at least 1 angle photos for the 360° view')
-    return
-  }
-
+  if (!activeLetter.value || publishing.value || saving.value) return
   publishing.value = true
-
-  const { error } = await supabase
-    .from('letters')
-    .update({ published: true })
-    .eq('id', activeLetter.value.id)
-
-  if (error) { alert('Failed to publish'); publishing.value = false; return }
-
-  activeLetter.value.published = true
-  showQRCode()
-  publishing.value = false
-  loadLetters()
+  try {
+    // Save the chosen design and content in the same update that publishes it.
+    const { error } = await supabase.from('letters')
+      .update({ ...letterEdits(activeLetter.value), published: true })
+      .eq('id', activeLetter.value.id)
+    if (error) { alert(letterSaveError(error)); return }
+    activeLetter.value.published = true
+    showQRCode()
+    await loadLetters()
+  } catch {
+    alert(letterSaveError(null))
+  } finally {
+    publishing.value = false
+  }
 }
 
 function getLetterUrl(letterId: string) {
@@ -746,6 +770,7 @@ watch(activeMarket, () => {
               <p class="letter-order" v-if="letter.order_id">Order: <code>{{ letter.order_id.slice(0, 8) }}...</code></p>
               <p class="letter-order" v-else>Standalone letter</p>
               <p class="letter-order">Store: {{ letter.market_code === 'CA' ? 'Canada' : 'Philippines' }}</p>
+              <p class="letter-order">Theme: {{ getTheme(letter.letter_theme, letter.sympathy_mode).name }}</p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>
             </div>
           </div>
@@ -835,7 +860,8 @@ watch(activeMarket, () => {
             <span>Replays <strong>{{ analyticsFor(activeLetter.id)?.replayed_views || 0 }}</strong></span>
           </div>
 
-          <div class="letter-screen-journey">
+          <p v-if="activeLetter.letter_theme" class="theme-analytics-note">This theme skips empty chapters. Feature totals above apply across all themes.</p>
+          <div v-else class="letter-screen-journey">
             <div class="letter-screen-journey-title">
               <h4>Page Journey</h4>
               <span>Views per page</span>
@@ -859,6 +885,29 @@ watch(activeMarket, () => {
       </div>
 
       <!-- Edit Fields -->
+      <section class="detail-section admin-letter-theme">
+        <h3>Letter Theme</h3>
+        <p class="theme-help">Choose the design the recipient will see when they open this letter.</p>
+        <fieldset class="theme-choices" :disabled="saving || publishing">
+          <legend class="theme-legend">Occasion</legend>
+          <label v-for="theme in LETTER_THEMES" :key="theme.id || 'classic'" class="theme-choice" :style="{ '--theme-ink': theme.ink, '--theme-paper': theme.paper }">
+            <input v-model="activeLetter.letter_theme" type="radio" name="admin-letter-theme" :value="theme.id" />
+            <span><strong>{{ theme.name }}</strong><small>{{ theme.description }}</small></span>
+          </label>
+        </fieldset>
+        <fieldset v-if="activeLetter.letter_theme === 'sympathy'" class="sympathy-choices" :disabled="saving || publishing">
+          <legend>Sympathy wording</legend>
+          <label><input v-model="activeLetter.sympathy_mode" type="radio" name="admin-sympathy-mode" value="support" /> Comfort and support</label>
+          <label><input v-model="activeLetter.sympathy_mode" type="radio" name="admin-sympathy-mode" value="remembrance" /> In remembrance</label>
+        </fieldset>
+        <div class="theme-design-sample" :style="{ color: selectedTheme.ink, backgroundColor: selectedTheme.paper }" aria-live="polite">
+          <small>{{ selectedTheme.name }} · Design sample</small>
+          <h4>{{ selectedTheme.headline }}</h4>
+          <p>{{ selectedTheme.notes }}</p>
+        </div>
+        <p class="theme-help">{{ activeLetter.published ? 'Save Changes updates the published letter at its existing link.' : 'Save Changes keeps this as a draft. Publish saves the selected theme and makes the letter available.' }}</p>
+        <p v-if="activeLetter.letter_theme === 'sympathy'" class="theme-help">Music plays only when the recipient chooses. No celebration effects.</p>
+      </section>
       <div class="detail-section">
         <h3>Letter Content</h3>
         <div class="detail-field">
@@ -874,7 +923,7 @@ watch(activeMarket, () => {
           <textarea v-model="activeLetter.message" rows="5"></textarea>
         </div>
         <div class="detail-field">
-          <label>Petal Messages</label>
+          <label>{{ selectedTheme.notes }}</label>
           <div class="petals-edit">
             <div v-for="(_, i) in activeLetter.petal_messages" :key="i" class="petal-edit-row">
               <span class="petal-num">{{ i + 1 }}</span>
@@ -887,7 +936,7 @@ watch(activeMarket, () => {
             </div>
           </div>
         </div>
-        <button class="btn-save" @click="saveLetter">Save Changes</button>
+        <button class="btn-save" :disabled="saving || publishing" @click="saveLetter">{{ saving ? 'Saving...' : 'Save Changes' }}</button>
       </div>
 
       <!-- Memory Photos -->
@@ -1093,3 +1142,22 @@ watch(activeMarket, () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.theme-help, .theme-analytics-note { font-size: 13px; line-height: 1.6; color: #626777; margin: 8px 0 16px; }
+.theme-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 0; border: 0; margin: 18px 0; min-width: 0; }
+.theme-legend { font-size: 13px; font-weight: 600; padding-bottom: 12px; }
+.theme-choice { position: relative; cursor: pointer; }
+.theme-choice input { position: absolute; top: 17px; left: 12px; accent-color: var(--theme-ink); }
+.theme-choice > span { display: block; min-height: 100px; height: 100%; padding: 14px 12px 14px 34px; border: 2px solid transparent; border-radius: 12px; background: var(--theme-paper); color: var(--theme-ink); }
+.theme-choice strong, .theme-choice small { display: block; }
+.theme-choice small { font-size: 12px; line-height: 1.6; margin-top: 8px; }
+.theme-choice input:checked + span { border-color: var(--theme-ink); }
+.theme-choice input:focus-visible + span { outline: 3px solid var(--theme-ink); outline-offset: 3px; }
+.sympathy-choices { padding: 16px; border: 1px solid #dfe8df; border-radius: 10px; margin-bottom: 16px; }
+.sympathy-choices label { display: inline-flex; gap: 8px; align-items: center; margin: 8px 20px 8px 0; font-size: 13px; }
+.theme-design-sample { text-align: center; padding: 28px 18px; border-radius: 12px; }
+.theme-design-sample small { font-size: 11px; letter-spacing: .08em; }
+.theme-design-sample h4 { font: 30px/1.25 Georgia, serif; margin: 16px auto; max-width: 430px; color: inherit; }
+.theme-design-sample p { font-size: 13px; }
+</style>

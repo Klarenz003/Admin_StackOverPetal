@@ -14,7 +14,7 @@ const admin = useAdminStore()
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
 const INACTIVITY_LIMIT_MS = 60 * 60 * 1000
-let inactivityTimer: ReturnType<typeof window.setTimeout> | null = null
+let inactivityTimer: number | null = null
 let loggingOutForInactivity = false
 const activityEvents = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'pointerdown']
 
@@ -29,6 +29,7 @@ const pageTitle = computed(() => {
     transactions: 'Transactions',
     costing: 'Costing & Profit',
     letters: 'Letters',
+    'gift-qr': 'Gift QR codes',
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
     'staff-accounts': 'Admin Accounts',
@@ -48,6 +49,7 @@ const navItems = computed(() => [
   { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
   { to: '/transactions', icon: '💳', label: 'Transactions' },
   { to: '/letters', icon: '💌', label: 'Letters' },
+  { to: '/gift-qr', icon: 'QR', label: 'Gift QR codes' },
   ...(auth.isOwner ? [
     { to: '/investor-access', icon: 'IA', label: 'Investor Access' },
     { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },

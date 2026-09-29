@@ -12,6 +12,7 @@ const router = createRouter({
         { path: 'orders',       name: 'orders',       component: () => import('@/pages/OrdersPage.vue')       },
         { path: 'messages',     name: 'messages',     component: () => import('@/pages/MessagesPage.vue')     },
         { path: 'letters', name: 'letters', component: () => import('@/pages/LettersPage.vue') },
+        { path: 'gift-qr', name: 'gift-qr', component: () => import('@/pages/GiftQrPage.vue') },
         { path: 'products', name: 'products', component: () => import('@/pages/ProductsPage.vue') },
         { path: 'gallery', name: 'gallery', component: () => import('@/pages/GalleryPage.vue'), meta: { ownerOnly: true } },
         { path: 'delivery-slots', name: 'delivery-slots', component: () => import('@/pages/DeliveryCapacityPage.vue') },
