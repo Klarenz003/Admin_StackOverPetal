@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { PhFlower, PhX, PhList } from '@phosphor-icons/vue'
+import { PhCoins, PhChartBar, PhPackage, PhChatCircle, PhCamera, PhCalendarBlank, PhCreditCard, PhEnvelopeSimple, PhQrCode, PhKey, PhEnvelopeOpen, PhUsers, PhRobot } from '@phosphor-icons/vue'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -30,6 +33,7 @@ const pageTitle = computed(() => {
     costing: 'Costing & Profit',
     letters: 'Letters',
     'gift-qr': 'Gift QR codes',
+    'letter-v2-qr': 'LetterPage V2 QR codes',
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
     'staff-accounts': 'Admin Accounts',
@@ -40,22 +44,23 @@ const pageTitle = computed(() => {
 })
 
 const navItems = computed(() => [
-  { to: '/costing', icon: '💰', label: 'Costing & Profit' },
-  { to: '/overview', icon: '📊', label: 'Overview' },
-  { to: '/orders', icon: '📦', label: 'Orders', badge: admin.pendingOrders },
-  { to: '/messages', icon: '💬', label: 'Messages', badge: admin.unreadMessages },
-  { to: '/products', icon: '🌸', label: 'Products' },
-  ...(auth.isOwner ? [{ to: '/gallery', icon: '📸', label: 'Gallery' }] : []),
-  { to: '/delivery-slots', icon: '📅', label: 'Delivery Slots' },
-  { to: '/transactions', icon: '💳', label: 'Transactions' },
-  { to: '/letters', icon: '💌', label: 'Letters' },
-  { to: '/gift-qr', icon: 'QR', label: 'Gift QR codes' },
+  { to: '/costing', icon: PhCoins, label: 'Costing & Profit' },
+  { to: '/overview', icon: PhChartBar, label: 'Overview' },
+  { to: '/orders', icon: PhPackage, label: 'Orders', badge: admin.pendingOrders },
+  { to: '/messages', icon: PhChatCircle, label: 'Messages', badge: admin.unreadMessages },
+  { to: '/products', icon: PhFlower, label: 'Products' },
+  ...(auth.isOwner ? [{ to: '/gallery', icon: PhCamera, label: 'Gallery' }] : []),
+  { to: '/delivery-slots', icon: PhCalendarBlank, label: 'Delivery Slots' },
+  { to: '/transactions', icon: PhCreditCard, label: 'Transactions' },
+  { to: '/letters', icon: PhEnvelopeSimple, label: 'Letters' },
+  { to: '/gift-qr', icon: PhQrCode, label: 'Gift QR codes' },
+  { to: '/letter-v2-qr', icon: PhQrCode, label: 'LetterPage V2 QR' },
   ...(auth.isOwner ? [
-    { to: '/investor-access', icon: 'IA', label: 'Investor Access' },
-    { to: '/investor-letters', icon: 'IL', label: 'Investor Letters' },
+    { to: '/investor-access', icon: PhKey, label: 'Investor Access' },
+    { to: '/investor-letters', icon: PhEnvelopeOpen, label: 'Investor Letters' },
   ] : []),
-  ...(auth.isOwner ? [{ to: '/staff-accounts', icon: 'ID', label: 'Admin Accounts' }] : []),
-  ...(auth.isOwner ? [{ to: '/chatbot-knowledge', icon: 'AI', label: 'Chatbot Knowledge' }] : []),
+  ...(auth.isOwner ? [{ to: '/staff-accounts', icon: PhUsers, label: 'Admin Accounts' }] : []),
+  ...(auth.isOwner ? [{ to: '/chatbot-knowledge', icon: PhRobot, label: 'Chatbot Knowledge' }] : []),
 ])
 
 function logout() {
@@ -132,7 +137,7 @@ onBeforeUnmount(() => {
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div>
-          <h2><span class="brand-icon">🌸</span><span class="brand-text">Stack Petals</span></h2>
+          <h2><span class="brand-icon"><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></span><span class="brand-text">Stack Petals</span></h2>
           <p>Admin Panel</p>
         </div>
         <button
@@ -148,9 +153,7 @@ onBeforeUnmount(() => {
           type="button"
           aria-label="Close sidebar"
           @click="closeMobileSidebar"
-        >
-          ×
-        </button>
+        > <PhX class="ui-icon" aria-hidden="true" :size="'1em'" /> </button>
       </div>
 
       <nav class="sidebar-nav" aria-label="Admin navigation">
@@ -162,7 +165,7 @@ onBeforeUnmount(() => {
           active-class="active"
           :title="sidebarCollapsed ? item.label : undefined"
         >
-          <span class="icon">{{ item.icon }}</span>
+          <span class="icon"><component :is="item.icon" :size="22" aria-hidden="true" /></span>
           <span class="nav-label">{{ item.label }}</span>
           <span class="nav-badge" v-if="Number(item.badge || 0) > 0">{{ item.badge }}</span>
         </RouterLink>
@@ -188,7 +191,7 @@ onBeforeUnmount(() => {
     <main class="main">
       <div class="topbar">
         <div class="topbar-title">
-          <button class="mobile-menu-btn" type="button" aria-label="Open sidebar" @click="openMobileSidebar">☰</button>
+          <button class="mobile-menu-btn" type="button" aria-label="Open sidebar" @click="openMobileSidebar"><PhList class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
           <h1>{{ pageTitle }}</h1>
         </div>
         <div class="topbar-actions">
