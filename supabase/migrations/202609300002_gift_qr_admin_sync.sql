@@ -67,8 +67,10 @@ begin
          claimed_at = coalesce(q.claimed_at, now())
    where q.public_token = trim(p_public_token)
      and q.status in ('unused', 'claimed')
-     and (nullif(trim(coalesce(p_activation_code, '')), '') is null
-          or q.activation_code = upper(trim(p_activation_code)))
+     and (
+       q.status = 'claimed'
+       or q.activation_code = upper(trim(coalesce(p_activation_code, '')))
+     )
   returning q.id, q.product_name, q.has_360_view, q.has_photo_upload, q.status, q.letter_id;
 end;
 $$;
