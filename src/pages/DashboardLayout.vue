@@ -32,6 +32,7 @@ const pageTitle = computed(() => {
     transactions: 'Transactions',
     costing: 'Costing & Profit',
     letters: 'Letters',
+    'gift-letters': 'Gift Letters',
     'gift-qr': 'Gift QR codes',
     'investor-access': 'Investor Access',
     'investor-letters': 'Investor Letters',
@@ -52,6 +53,7 @@ const navItems = computed(() => [
   { to: '/delivery-slots', icon: PhCalendarBlank, label: 'Delivery Slots' },
   { to: '/transactions', icon: PhCreditCard, label: 'Transactions' },
   { to: '/letters', icon: PhEnvelopeSimple, label: 'Letters' },
+  { to: '/gift-letters', icon: PhEnvelopeOpen, label: 'Gift Letters' },
   { to: '/gift-qr', icon: PhQrCode, label: 'Gift QR codes' },
   ...(auth.isOwner ? [
     { to: '/investor-access', icon: PhKey, label: 'Investor Access' },

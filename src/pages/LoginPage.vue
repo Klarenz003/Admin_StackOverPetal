@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhFlower } from '@phosphor-icons/vue'
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -28,7 +30,7 @@ async function login() {
   <div class="login-screen">
     <div class="login-card">
       <div class="brand">
-        <h1>🌸 Stack Petals</h1>
+        <h1><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /> Stack Petals</h1>
         <p>Admin Dashboard</p>
       </div>
 

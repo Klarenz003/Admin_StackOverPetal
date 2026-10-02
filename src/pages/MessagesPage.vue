@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhChatCircle } from '@phosphor-icons/vue'
+
 import { useAdminStore } from '@/stores/admin'
 import type { Message } from '@/types'
 const admin = useAdminStore()
@@ -53,7 +55,7 @@ const admin = useAdminStore()
           <tr v-if="admin.filteredMessages.length === 0">
             <td colspan="7">
               <div class="empty-state">
-                <div class="emoji">💬</div>
+                <div class="emoji"><PhChatCircle class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
                 <p>No messages found.</p>
               </div>
             </td>

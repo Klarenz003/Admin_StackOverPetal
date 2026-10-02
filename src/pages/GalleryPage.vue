@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhDotsSixVertical, PhArrowUp, PhArrowDown } from '@phosphor-icons/vue'
+
 import { onMounted, ref } from 'vue'
 import { supabase } from '@/supabaseClient'
 
@@ -300,11 +302,11 @@ onMounted(loadGalleryImages)
           @dragend="dragEnd"
         >
           <div class="gallery-drag-toolbar">
-            <span class="gallery-drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange">&#8942;&#8942;</span>
+            <span class="gallery-drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange"><PhDotsSixVertical class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
             <span>{{ savingOrder ? 'Saving arrangement...' : 'Drag to rearrange' }}</span>
             <div class="gallery-mobile-order-actions">
-              <button type="button" :disabled="index === 0 || savingOrder" aria-label="Move image earlier" @click="moveImage(index, -1)">&#8593;</button>
-              <button type="button" :disabled="index === images.length - 1 || savingOrder" aria-label="Move image later" @click="moveImage(index, 1)">&#8595;</button>
+              <button type="button" :disabled="index === 0 || savingOrder" aria-label="Move image earlier" @click="moveImage(index, -1)"><PhArrowUp class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
+              <button type="button" :disabled="index === images.length - 1 || savingOrder" aria-label="Move image later" @click="moveImage(index, 1)"><PhArrowDown class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
             </div>
           </div>
           <img

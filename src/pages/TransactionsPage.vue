@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhCreditCard } from '@phosphor-icons/vue'
+
 import { useAdminStore } from '@/stores/admin'
 const admin = useAdminStore()
 </script>
@@ -86,7 +88,7 @@ const admin = useAdminStore()
             <tr v-if="admin.filteredTx.length === 0">
               <td colspan="7">
                 <div class="empty-state">
-                  <div class="emoji">💳</div>
+                  <div class="emoji"><PhCreditCard class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
                   <p>No transactions found.</p>
                 </div>
               </td>

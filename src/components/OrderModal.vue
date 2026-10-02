@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhX } from '@phosphor-icons/vue'
+
 import { useAdminStore } from '@/stores/admin'
 const admin = useAdminStore()
 </script>
@@ -10,7 +12,7 @@ const admin = useAdminStore()
     @click.self="admin.activeOrder = null"
   >
     <div class="modal-box">
-      <button class="modal-close" @click="admin.activeOrder = null">✕</button>
+      <button aria-label="Close" class="modal-close" @click="admin.activeOrder = null"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
       <h2>Order Detail</h2>
 
       <div class="detail-grid">

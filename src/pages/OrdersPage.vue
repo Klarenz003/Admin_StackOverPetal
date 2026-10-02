@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhPackage } from '@phosphor-icons/vue'
+
 import { useAdminStore } from '@/stores/admin'
 const admin = useAdminStore()
 </script>
@@ -78,7 +80,7 @@ const admin = useAdminStore()
           <tr v-if="admin.filteredOrders.length === 0">
             <td colspan="11">
               <div class="empty-state">
-                <div class="emoji">📦</div>
+                <div class="emoji"><PhPackage class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
                 <p>No orders found.</p>
               </div>
             </td>

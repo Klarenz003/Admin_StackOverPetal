@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhFlower, PhEnvelopeSimple, PhArrowLeft, PhX, PhArrowRight } from '@phosphor-icons/vue'
+
 import { computed, ref, onMounted, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
 import { useAdminStore } from '@/stores/admin'
@@ -173,6 +175,7 @@ async function loadLetters() {
     .from('letters')
     .select('*')
     .eq('market_code', activeMarket.value)
+    .is('letter_v2_qr_id', null)
     .order('created_at', { ascending: false })
   if (error) console.error(error)
   letters.value = data || []
@@ -751,7 +754,7 @@ watch(activeMarket, () => {
       <div v-if="loading" class="loading">Loading letters...</div>
 
       <div v-else-if="letters.length === 0" class="empty-state">
-        <div class="emoji">💌</div>
+        <div class="emoji"><PhEnvelopeSimple class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
         <p>No {{ activeMarketLabel }} letters yet. Letters appear here when customers include them in their orders.</p>
       </div>
 
@@ -794,7 +797,7 @@ watch(activeMarket, () => {
 
     <!-- Detail View -->
     <div v-else class="letter-detail">
-      <button class="back-btn" @click="activeLetter = null">← Back to Letters</button>
+      <button class="back-btn" @click="activeLetter = null"><PhArrowLeft class="ui-icon" aria-hidden="true" :size="'1em'" /> Back to Letters</button>
 
       <div class="detail-header">
         <div>
@@ -966,7 +969,7 @@ watch(activeMarket, () => {
               :alt="`Memory ${i + 1}`"
               class="memory-thumb"
             />
-            <button class="remove-angle" @click="removeMemoryPhoto(i)">✕</button>
+            <button aria-label="Remove photo" class="remove-angle" @click="removeMemoryPhoto(i)"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
           </div>
         </div>
 
@@ -1066,7 +1069,7 @@ watch(activeMarket, () => {
             {{ removingAnglePhotos ? 'Removing...' : 'Remove All' }}
           </button>
         </div>
-        <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front → right → back → left → front). More frames = smoother rotation.</p>
+        <p class="section-hint">Upload as many PNG photos as you want with transparent background in order (front <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /> right <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /> back <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /> left <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /> front). More frames = smoother rotation.</p>
 
         <div v-if="activeLetter.angle_photos?.length > 0" class="angle-grid">
           <div
@@ -1075,7 +1078,7 @@ watch(activeMarket, () => {
             class="angle-item"
           >
             <img :src="photo" :alt="`Angle ${i + 1}`" />
-            <button class="remove-angle" @click="removeAnglePhoto(i)">✕</button>
+            <button aria-label="Remove photo" class="remove-angle" @click="removeAnglePhoto(i)"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
             <span class="angle-num">{{ i + 1 }}</span>
           </div>
         </div>
@@ -1105,7 +1108,7 @@ watch(activeMarket, () => {
             @click="publishLetter"
             :disabled="publishing"
           >
-            {{ publishing ? 'Publishing...' : '🌸 Publish & Generate QR' }}
+            <PhFlower class="ui-icon" :size="'1em'" aria-hidden="true" /> {{ publishing ? 'Publishing...' : 'Publish & Generate QR' }}
           </button>
         </div>
 
