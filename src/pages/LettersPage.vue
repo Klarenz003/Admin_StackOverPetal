@@ -16,6 +16,7 @@ interface Letter {
   petal_messages: string[]
   memories: string[]
   angle_photos: string[]
+  backgrounds?: Record<string, unknown>
   music_url: string
   bouquet_image_url: string
   published: boolean
@@ -1058,6 +1059,7 @@ watch(activeMarket, () => {
       <div class="detail-section">
         <div class="section-title-row">
           <h3>360° Bouquet Photos</h3>
+          <p v-if="activeLetter.backgrounds?.selected_bouquet_name" class="section-hint">Customer chose: {{ activeLetter.backgrounds.selected_bouquet_name }}. Upload only this bouquet’s full turn.</p>
           <span class="photo-count">{{ activeLetter.angle_photos?.length || 0 }} frames</span>
           <button
             v-if="activeLetter.angle_photos?.length > 0"

@@ -14,6 +14,9 @@ interface GiftLetter {
   published: boolean
   created_at: string
   market_code: 'PH' | 'CA'
+  bouquet_image_url: string | null
+  angle_photos: string[] | null
+  has_360_view: boolean | null
 }
 
 const admin = useAdminStore()
@@ -22,6 +25,61 @@ const loading = ref(false)
 const error = ref('')
 const search = ref('')
 const activeLetter = ref<GiftLetter | null>(null)
+const uploadingAssets = ref(false)
+const assetError = ref('')
+
+async function saveAssets(letter: GiftLetter, values: Partial<GiftLetter>) {
+  const { error: saveError } = await supabase.from('letters').update(values)
+    .eq('id', letter.id).eq('market_code', letter.market_code).select('id').single()
+  if (saveError) throw saveError
+  Object.assign(letter, values)
+}
+
+async function uploadAssets(event: Event, kind: 'bouquet' | 'frames') {
+  const input = event.target as HTMLInputElement
+  const letter = activeLetter.value
+  if (!letter || uploadingAssets.value) return
+  const files = Array.from(input.files || []).filter(file => file.type.startsWith('image/'))
+  if (!files.length) return
+  if (kind === 'frames' && files.length < 2) {
+    assetError.value = 'Choose at least two ordered photos for a full turn.'
+    input.value = ''
+    return
+  }
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+  uploadingAssets.value = true
+  assetError.value = ''
+  try {
+    const urls: string[] = []
+    const bucket = kind === 'bouquet' ? 'letter-bouquets' : 'letter-photos'
+    for (const file of (kind === 'bouquet' ? files.slice(0, 1) : files)) {
+      const extension = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'png'
+      const path = `${letter.id}/${kind}-${crypto.randomUUID()}.${extension}`
+      const { data, error: uploadError } = await supabase.storage.from(bucket).upload(path, file)
+      if (uploadError) throw uploadError
+      urls.push(supabase.storage.from(bucket).getPublicUrl(data.path).data.publicUrl)
+    }
+    await saveAssets(letter, kind === 'bouquet'
+      ? { bouquet_image_url: urls[0] }
+      : { angle_photos: urls, has_360_view: true })
+  } catch (cause: any) {
+    assetError.value = cause?.message || 'Could not attach bouquet assets. Please try again.'
+  } finally {
+    uploadingAssets.value = false
+    input.value = ''
+  }
+}
+
+async function detachAssets(kind: 'bouquet' | 'frames') {
+  if (!activeLetter.value || uploadingAssets.value) return
+  uploadingAssets.value = true
+  assetError.value = ''
+  try {
+    await saveAssets(activeLetter.value, kind === 'bouquet' ? { bouquet_image_url: '' } : { angle_photos: [] })
+  } catch (cause: any) {
+    assetError.value = cause?.message || 'Could not detach these assets.'
+  } finally { uploadingAssets.value = false }
+}
 const activeMarket = computed(() => admin.effectiveMarket)
 
 const filteredLetters = computed(() => {
@@ -40,7 +98,7 @@ async function loadLetters() {
   error.value = ''
   const { data, error: loadError } = await supabase
     .from('letters')
-    .select('id, letter_v2_qr_id, recipient, sender, message, letter_theme, published, created_at, market_code')
+    .select('id, letter_v2_qr_id, recipient, sender, message, letter_theme, published, created_at, market_code, bouquet_image_url, angle_photos, has_360_view')
     .eq('market_code', activeMarket.value)
     .not('letter_v2_qr_id', 'is', null)
     .order('created_at', { ascending: false })
@@ -49,7 +107,8 @@ async function loadLetters() {
   loading.value = false
 }
 
-watch(activeMarket, loadLetters)
+watch(activeMarket, () => { activeLetter.value = null; void loadLetters() })
+watch(activeLetter, () => { assetError.value = '' })
 onMounted(loadLetters)
 </script>
 
@@ -99,6 +158,20 @@ onMounted(loadLetters)
         <p class="gift-letter-modal-from">From {{ activeLetter.sender || 'Anonymous' }} · {{ activeLetter.letter_theme || 'romance' }}</p>
         <div class="gift-letter-message">{{ activeLetter.message || 'No message provided.' }}</div>
         <small>Created {{ formatDate(activeLetter.created_at) }}</small>
+        <section class="gift-letter-assets">
+          <h3>Bouquet picture</h3>
+          <p>Separate from memory photos. Without a picture, the letter shows its gift-box illustration.</p>
+          <img v-if="activeLetter.bouquet_image_url" :src="activeLetter.bouquet_image_url" alt="Letter bouquet" class="gift-letter-bouquet" />
+          <label>Upload bouquet photo <input type="file" accept="image/*" :disabled="uploadingAssets" @change="uploadAssets($event, 'bouquet')" /></label>
+          <button v-if="activeLetter.bouquet_image_url" type="button" :disabled="uploadingAssets" @click="detachAssets('bouquet')">Detach bouquet photo</button>
+          <h3>360° bouquet frames</h3>
+          <p>Upload one bouquet’s complete turn. Files are ordered by filename (001, 002, …). Uploading replaces the attached frame set.</p>
+          <p>{{ activeLetter.angle_photos?.length || 0 }} frames attached</p>
+          <label>Upload 360° frames <input type="file" accept="image/*" multiple :disabled="uploadingAssets" @change="uploadAssets($event, 'frames')" /></label>
+          <button v-if="activeLetter.angle_photos?.length" type="button" :disabled="uploadingAssets" @click="detachAssets('frames')">Detach 360° frames</button>
+          <p v-if="uploadingAssets" role="status">Saving bouquet assets…</p>
+          <p v-if="assetError" role="alert" class="error-text">{{ assetError }}</p>
+        </section>
       </div>
     </div>
   </section>
@@ -127,5 +200,12 @@ onMounted(loadLetters)
 .modal-close { position:absolute; top:12px; right:16px; border:0; background:none; color:#9d6975; font-size:28px; cursor:pointer; }
 .gift-letter-modal h2 { margin:4px 0; }.gift-letter-modal-from { color:#856e73; }
 .gift-letter-message { margin:22px 0; padding:18px; border:1px solid #ecd5d4; border-radius:12px; white-space:pre-wrap; line-height:1.6; color:#57464b; }
+.gift-letter-modal { max-height:90svh; overflow-y:auto; }
+.gift-letter-assets { display:grid; gap:12px; margin-top:24px; border-top:1px solid #ecd5d4; padding-top:16px; }
+.gift-letter-assets h3, .gift-letter-assets p { margin:0; }
+.gift-letter-assets p { color:#856e73; font-size:13px; }
+.gift-letter-assets label { display:grid; gap:8px; }
+.gift-letter-assets input { max-width:100%; }
+.gift-letter-bouquet { width:100%; height:200px; object-fit:contain; }
 @media (max-width:700px) { .gift-letters-page { padding:16px; }.gift-letters-header { align-items:flex-start; flex-direction:column; }.gift-letter-card { align-items:flex-start; }.gift-letter-meta { margin-left:auto; }.gift-letter-main span { max-width:42vw; } }
 </style>

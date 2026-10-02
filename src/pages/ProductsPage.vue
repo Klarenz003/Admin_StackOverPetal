@@ -16,6 +16,7 @@ interface Product {
   badge: string | null
   stock: number
   featured: boolean
+  has_360_view: boolean
   pre_order_allowed: boolean
   prep_days: number
   delivery_restrictions: string
@@ -54,6 +55,7 @@ const form = ref({
   badge: null as string | null,
   stock: 10,
   featured: false,
+  has_360_view: false,
   pre_order_allowed: true,
   prep_days: 5,
   delivery_restrictions: '',
@@ -63,7 +65,7 @@ async function loadProducts() {
   loading.value = true
   const { data } = await supabase
     .from('product_markets')
-    .select('id, product_id, price, sale_price, stock, featured, pre_order_allowed, prep_days, delivery_restrictions, sort_order, products(name, image, category, badge)')
+    .select('id, product_id, price, sale_price, stock, featured, pre_order_allowed, prep_days, delivery_restrictions, sort_order, products(name, image, category, badge, has_360_view)')
     .eq('market_code', admin.effectiveMarket)
     .order('sort_order', { ascending: true })
   products.value = (data || []).map((row: any) => ({
@@ -77,6 +79,7 @@ async function loadProducts() {
     sale_price: row.sale_price === null ? null : Number(row.sale_price),
     stock: Number(row.stock || 0),
     featured: !!row.featured,
+    has_360_view: Boolean(row.products?.has_360_view),
     pre_order_allowed: row.pre_order_allowed ?? true,
     prep_days: row.prep_days ?? 5,
     delivery_restrictions: row.delivery_restrictions || '',
@@ -174,6 +177,7 @@ const sharedPayload = {
   category: form.value.category,
   badge: form.value.badge || null,
   stock: form.value.stock,
+  has_360_view: form.value.has_360_view,
 }
 const marketPayload = {
   market_code: admin.effectiveMarket,
@@ -299,6 +303,7 @@ function resetForm() {
     badge: null,
     stock: 10,
     featured: false,
+    has_360_view: false,
     pre_order_allowed: true,
     prep_days: 5,
     delivery_restrictions: '',
@@ -418,6 +423,13 @@ async function dragEnd() {
       </div>
       <div class="form-group checkbox">
         <label>
+          <input v-model="form.has_360_view" type="checkbox" />
+          Eligible for the letter’s 360° bouquet viewer
+        </label>
+        <p class="upload-note">Customers can choose this product during checkout. Upload its actual 360° photos to the letter separately. This setting applies to this product across all markets.</p>
+      </div>
+      <div class="form-group checkbox">
+        <label>
           <input v-model="form.featured" type="checkbox" />
           Featured on homepage
         </label>
@@ -441,6 +453,7 @@ async function dragEnd() {
         <th>Stock</th>
         <th>Availability</th>
         <th>Featured</th>
+        <th>360° Eligible</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -484,6 +497,7 @@ async function dragEnd() {
           </div>
         </td>
         <td>{{ product.featured ? '✓' : '—' }}</td>
+        <td>{{ product.has_360_view ? 'Yes' : 'No' }}</td>
         <td>
           <button class="btn-small" @click="editProduct(product)">Edit</button>
           <button class="btn-small btn-danger" @click="deleteProduct(product.id)">Delete</button>
