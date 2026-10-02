@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { PhFlower, PhEnvelopeSimple, PhArrowLeft, PhX, PhArrowRight } from '@phosphor-icons/vue'
+import '@/assets/letter-workspace.css'
+import { PhFlower, PhEnvelopeSimple, PhArrowLeft, PhX, PhArrowRight, PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 import { computed, ref, onMounted, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
@@ -25,6 +26,7 @@ interface Letter {
   sympathy_mode?: 'support' | 'remembrance' | null
   market_code: 'PH' | 'CA'
   created_at: string
+  orders?: { id: string; phone: string | null; customer_name: string | null } | null
 }
 
 interface LetterAnalyticsSummary {
@@ -42,6 +44,24 @@ interface LetterAnalyticsSummary {
 }
 
 const letters = ref<Letter[]>([])
+const search = ref('')
+const statusFilter = ref('all')
+const sourceFilter = ref('all')
+const loadError = ref('')
+const filteredLetters = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  const phoneTerm = term.replace(/[^\d+]/g, '')
+  return letters.value.filter(letter => {
+    const statusMatches = statusFilter.value === 'all' || letter.published === (statusFilter.value === 'published')
+    const sourceMatches = sourceFilter.value === 'all' || Boolean(letter.order_id) === (sourceFilter.value === 'order')
+    const textMatches = !term || [letter.id, letter.order_id, letter.recipient, letter.sender, letter.message, letter.orders?.customer_name, letter.orders?.phone]
+      .some(value => String(value || '').toLowerCase().includes(term))
+      || (/^[+\d\s().-]+$/.test(term) && phoneTerm.length >= 3 && String(letter.orders?.phone || '').replace(/[^\d+]/g, '').includes(phoneTerm))
+    return statusMatches && sourceMatches && textMatches
+  })
+})
+const publishedCount = computed(() => letters.value.filter(letter => letter.published).length)
+function clearFilters() { search.value = ''; statusFilter.value = 'all'; sourceFilter.value = 'all' }
 const loading = ref(false)
 const analyticsLoading = ref(false)
 const analyticsError = ref('')
@@ -172,15 +192,40 @@ function normalizeLetter(letter: Letter): Letter {
 // ── Load Letters ───────────────────────────────────────────────────
 async function loadLetters() {
   loading.value = true
-  const { data, error } = await supabase
-    .from('letters')
-    .select('*')
-    .eq('market_code', activeMarket.value)
-    .is('letter_v2_qr_id', null)
-    .order('created_at', { ascending: false })
-  if (error) console.error(error)
-  letters.value = data || []
-  loading.value = false
+  loadError.value = ''
+  const market = activeMarket.value
+  try {
+    // Do not require a PostgREST foreign-key relationship to display letters.
+    const { data, error } = await supabase
+      .from('letters')
+      .select('*')
+      .eq('market_code', market)
+      .is('letter_v2_qr_id', null)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    if (market !== activeMarket.value) return
+    letters.value = (data || []) as Letter[]
+
+    if (letters.value.some(letter => letter.order_id)) {
+      const { data: orders, error: orderError } = await supabase
+        .from('orders')
+        .select('id, phone, customer_name')
+        .eq('market_code', market)
+      if (market !== activeMarket.value) return
+      if (orderError) {
+        console.error(orderError)
+        loadError.value = 'Letters loaded, but customer phone details are unavailable. You can still search by recipient, sender, message, letter ID or order ID.'
+      } else {
+        const ordersById = new Map((orders || []).map(order => [order.id, order]))
+        letters.value = letters.value.map(letter => ({ ...letter, orders: ordersById.get(letter.order_id) || null }))
+      }
+    }
+  } catch (error: any) {
+    console.error(error)
+    if (market === activeMarket.value) loadError.value = `Could not load letters: ${error?.message || 'Please refresh and try again.'}`
+  } finally {
+    loading.value = false
+  }
   await loadLetterAnalytics()
 }
 
@@ -738,32 +783,45 @@ watch(activeMarket, () => {
 </script>
 
 <template>
-  <div class="letters-page">
+  <div class="letters-page letter-workspace">
 
     <!-- List View -->
     <div v-if="!activeLetter">
       <div class="letters-header">
         <div>
+          <p class="workspace-eyebrow">Letter studio · {{ activeMarketLabel }}</p>
           <h2>{{ activeMarketLabel }} Letters</h2>
-          <span class="letters-count">{{ letters.length }} in {{ activeMarketLabel }}</span>
+          <span class="letters-count">Manage order letters and standalone keepsakes, all in one place.</span>
         </div>
         <button class="btn-save letters-create-btn" type="button" :disabled="creatingLetter" @click="createStandaloneLetter">
           {{ creatingLetter ? 'Creating...' : '+ New Letter' }}
         </button>
       </div>
 
+      <div class="workspace-stats"><div><span>All letters</span><strong>{{ letters.length }}</strong><small>Your letter collection</small></div><div><span>Published</span><strong>{{ publishedCount }}</strong><small>Ready to be opened</small></div><div><span>Drafts</span><strong>{{ letters.length - publishedCount }}</strong><small>Waiting for a final touch</small></div></div>
+      <div class="workspace-toolbar">
+        <label class="workspace-search"><PhMagnifyingGlass :size="19" aria-hidden="true" /><input v-model="search" type="search" aria-label="Search letters" placeholder="Recipient, sender, letter ID, order number or phone…" /></label>
+        <select v-model="statusFilter" aria-label="Filter letter status"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Drafts</option></select>
+        <select v-model="sourceFilter" aria-label="Filter letter source"><option value="all">All sources</option><option value="order">Order letters</option><option value="standalone">Standalone</option></select>
+        <button class="workspace-secondary" :disabled="loading" @click="loadLetters">Refresh</button>
+      </div>
+      <div class="workspace-results"><span>{{ filteredLetters.length }} of {{ letters.length }} letters</span><button v-if="search || statusFilter !== 'all' || sourceFilter !== 'all'" @click="clearFilters">Clear filters</button></div>
+      <p v-if="loadError" class="workspace-error" role="alert">{{ loadError }}</p>
+
       <div v-if="loading" class="loading">Loading letters...</div>
 
-      <div v-else-if="letters.length === 0" class="empty-state">
+      <div v-else-if="filteredLetters.length === 0" class="empty-state">
         <div class="emoji"><PhEnvelopeSimple class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
-        <p>No {{ activeMarketLabel }} letters yet. Letters appear here when customers include them in their orders.</p>
+        <h3>{{ letters.length ? 'No matching letters' : 'Your letter collection starts here' }}</h3><p>{{ letters.length ? 'Try another recipient, phone number, or letter ID—or clear your filters.' : 'Create a standalone letter, or wait for a customer’s order letter.' }}</p>
       </div>
 
       <div v-else class="letters-list">
         <div
-          v-for="letter in letters"
+          v-for="letter in filteredLetters"
           :key="letter.id"
           class="letter-card"
+          role="button" tabindex="0" :aria-label="`Edit letter for ${letter.recipient || 'unnamed recipient'}`"
+          @keydown.enter="openLetter(letter)" @keydown.space.prevent="openLetter(letter)"
           @click="openLetter(letter)"
         >
           <div class="letter-card-left">
@@ -773,6 +831,7 @@ watch(activeMarket, () => {
               <p class="letter-sender">From: <strong>{{ letter.sender }}</strong></p>
               <p class="letter-order" v-if="letter.order_id">Order: <code>{{ letter.order_id.slice(0, 8) }}...</code></p>
               <p class="letter-order" v-else>Standalone letter</p>
+              <p class="letter-order">Letter: <code>{{ letter.id.slice(0, 8) }}</code><template v-if="letter.orders?.phone"> · {{ letter.orders.phone }}</template></p>
               <p class="letter-order">Store: {{ letter.market_code === 'CA' ? 'Canada' : 'Philippines' }}</p>
               <p class="letter-order">Theme: {{ getTheme(letter.letter_theme, letter.sympathy_mode).name }}</p>
               <p class="letter-preview">{{ letter.message?.slice(0, 60) }}...</p>

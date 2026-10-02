@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/letter-workspace.css'
 import { computed, onMounted, ref, watch } from 'vue'
 import { PhEnvelopeOpen, PhCheckCircle, PhClock, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import { supabase } from '@/supabaseClient'
@@ -24,6 +25,9 @@ const letters = ref<GiftLetter[]>([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
+const statusFilter = ref('all')
+const publishedCount = computed(() => letters.value.filter(letter => letter.published).length)
+const publicSite = (import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:5173').replace(/\/$/, '')
 const activeLetter = ref<GiftLetter | null>(null)
 const uploadingAssets = ref(false)
 const assetError = ref('')
@@ -84,9 +88,10 @@ const activeMarket = computed(() => admin.effectiveMarket)
 
 const filteredLetters = computed(() => {
   const term = search.value.trim().toLowerCase()
-  if (!term) return letters.value
-  return letters.value.filter(letter => [letter.recipient, letter.sender, letter.message, letter.letter_theme]
-    .some(value => value?.toLowerCase().includes(term)))
+  return letters.value.filter(letter =>
+    (statusFilter.value === 'all' || letter.published === (statusFilter.value === 'published')) &&
+    (!term || [letter.id, letter.letter_v2_qr_id, letter.recipient, letter.sender, letter.message, letter.letter_theme]
+      .some(value => value?.toLowerCase().includes(term))))
 })
 
 function formatDate(value: string) {
@@ -113,34 +118,38 @@ onMounted(loadLetters)
 </script>
 
 <template>
-  <section class="gift-letters-page">
+  <section class="gift-letters-page letter-workspace">
     <div class="page-header gift-letters-header">
       <div>
-        <p class="eyebrow">Standalone QR gifts</p>
+        <p class="workspace-eyebrow">Letter studio · Standalone QR gifts</p>
         <h1>Gift Letters</h1>
         <p>Letters created by customers after activating a Gift QR code.</p>
       </div>
       <div class="gift-letters-count"><PhEnvelopeOpen :size="18" /> {{ filteredLetters.length }} letters</div>
     </div>
 
-    <div class="gift-letters-toolbar card">
-      <PhMagnifyingGlass :size="18" />
-      <input v-model="search" type="search" placeholder="Search recipient, sender, or message…">
+    <div class="workspace-stats"><div><span>Gift letters</span><strong>{{ letters.length }}</strong><small>Created from activated gifts</small></div><div><span>Published</span><strong>{{ publishedCount }}</strong><small>Ready for their recipient</small></div><div><span>With 360° assets</span><strong>{{ letters.filter(letter => (letter.angle_photos?.length || 0) >= 2).length }}</strong><small>Bouquets brought to life</small></div></div>
+    <div class="workspace-toolbar">
+      <label class="workspace-search"><PhMagnifyingGlass :size="18" aria-hidden="true" /><input v-model="search" type="search" aria-label="Search gift letters" placeholder="Recipient, sender, message or letter ID…" /></label>
+      <select v-model="statusFilter" aria-label="Filter gift letter status"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Drafts</option></select>
+      <button class="workspace-secondary" :disabled="loading" @click="loadLetters">Refresh</button>
     </div>
+    <div class="workspace-results"><span>{{ filteredLetters.length }} of {{ letters.length }} gift letters</span><button v-if="search || statusFilter !== 'all'" @click="search = ''; statusFilter = 'all'">Clear filters</button></div>
 
     <p v-if="error" class="error-text">{{ error }}</p>
     <div v-if="loading" class="loading">Loading gift letters…</div>
     <div v-else-if="filteredLetters.length === 0" class="empty-state">
       <PhEnvelopeOpen :size="32" />
-      <h3>No gift letters yet</h3>
-      <p>Published letters from Gift QR codes will appear here, separate from order letters.</p>
+      <h3>{{ letters.length ? 'No matching gift letters' : 'Their words will live here' }}</h3>
+      <p>{{ letters.length ? 'Try another name or letter ID, or clear your filters.' : 'Letters appear here when customers publish their activated Gift QR.' }}</p>
     </div>
     <div v-else class="gift-letters-list">
-      <article v-for="letter in filteredLetters" :key="letter.id" class="card gift-letter-card" @click="activeLetter = letter">
+      <article v-for="letter in filteredLetters" :key="letter.id" class="card gift-letter-card" role="button" tabindex="0" :aria-label="`Open gift letter for ${letter.recipient || 'unnamed recipient'}`" @keydown.enter="activeLetter = letter" @keydown.space.prevent="activeLetter = letter" @click="activeLetter = letter">
         <div class="gift-letter-icon"><PhEnvelopeOpen :size="22" /></div>
         <div class="gift-letter-main">
           <h3>{{ letter.recipient || 'Unnamed recipient' }}</h3>
           <p>From {{ letter.sender || 'Anonymous' }}</p>
+          <small class="workspace-letter-id">{{ letter.letter_theme || 'romance' }} · {{ letter.id.slice(0, 8) }}</small>
           <span>{{ (letter.message || 'No message').slice(0, 160) }}{{ (letter.message || '').length > 160 ? '…' : '' }}</span>
         </div>
         <div class="gift-letter-meta">
@@ -151,13 +160,14 @@ onMounted(loadLetters)
     </div>
 
     <div v-if="activeLetter" class="modal-backdrop" @click.self="activeLetter = null">
-      <div class="modal-box gift-letter-modal">
+      <div class="modal-box gift-letter-modal" role="dialog" aria-modal="true" aria-labelledby="gift-letter-detail-title" @keydown.esc="activeLetter = null">
         <button class="modal-close" type="button" aria-label="Close" @click="activeLetter = null">×</button>
         <p class="eyebrow">Gift QR letter</p>
-        <h2>{{ activeLetter.recipient || 'Unnamed recipient' }}</h2>
+        <h2 id="gift-letter-detail-title">{{ activeLetter.recipient || 'Unnamed recipient' }}</h2>
         <p class="gift-letter-modal-from">From {{ activeLetter.sender || 'Anonymous' }} · {{ activeLetter.letter_theme || 'romance' }}</p>
         <div class="gift-letter-message">{{ activeLetter.message || 'No message provided.' }}</div>
         <small>Created {{ formatDate(activeLetter.created_at) }}</small>
+        <a v-if="activeLetter.published" class="workspace-preview-link" :href="`${publicSite}/letter-v2/${activeLetter.id}`" target="_blank" rel="noopener noreferrer">Open published letter ↗</a>
         <section class="gift-letter-assets">
           <h3>Bouquet picture</h3>
           <p>Separate from memory photos. Without a picture, the letter shows its gift-box illustration.</p>
