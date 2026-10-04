@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhFlower, PhX, PhList } from '@phosphor-icons/vue'
+import { PhFlower, PhX, PhList, PhHeartbeat } from '@phosphor-icons/vue'
 import { PhCoins, PhChartBar, PhPackage, PhChatCircle, PhCamera, PhCalendarBlank, PhCreditCard, PhEnvelopeSimple, PhQrCode, PhKey, PhEnvelopeOpen, PhUsers, PhRobot } from '@phosphor-icons/vue'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -38,6 +38,7 @@ const pageTitle = computed(() => {
     'investor-letters': 'Investor Letters',
     'staff-accounts': 'Admin Accounts',
     'chatbot-knowledge': 'Chatbot Knowledge',
+    'storefront-health': 'Storefront Health',
   }
 
   return labels[String(route.name || '')] || admin.tabLabel
@@ -54,13 +55,14 @@ const navItems = computed(() => [
   { to: '/transactions', icon: PhCreditCard, label: 'Transactions' },
   { to: '/letters', icon: PhEnvelopeSimple, label: 'Letters' },
   { to: '/gift-letters', icon: PhEnvelopeOpen, label: 'Gift Letters' },
-  { to: '/gift-qr', icon: PhQrCode, label: 'Gift QR codes' },
+  ...(auth.isOwner ? [{ to: '/gift-qr', icon: PhQrCode, label: 'Gift QR codes' }] : []),
   ...(auth.isOwner ? [
     { to: '/investor-access', icon: PhKey, label: 'Investor Access' },
     { to: '/investor-letters', icon: PhEnvelopeOpen, label: 'Investor Letters' },
   ] : []),
   ...(auth.isOwner ? [{ to: '/staff-accounts', icon: PhUsers, label: 'Admin Accounts' }] : []),
   ...(auth.isOwner ? [{ to: '/chatbot-knowledge', icon: PhRobot, label: 'Chatbot Knowledge' }] : []),
+  ...(auth.isOwner ? [{ to: '/storefront-health', icon: PhHeartbeat, label: 'Storefront Health' }] : []),
 ])
 
 function logout() {
