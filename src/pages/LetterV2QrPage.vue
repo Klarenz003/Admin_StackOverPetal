@@ -6,8 +6,9 @@ import { PhQrCode, PhMagnifyingGlass, PhPrinter, PhPlus, PhCopy, PhDownloadSimpl
 import { supabase } from '@/supabaseClient'
 import { giftCardSvg, giftClaimUrl, loadGiftCardTemplates, svgDataUrl, type GiftCardTemplates } from '@/utils/giftCardArtwork'
 import { downloadGiftCardPng, downloadGiftCardBatch } from '@/utils/giftCardPng'
+import GiftQrManageDialog from '@/components/GiftQrManageDialog.vue'
 
-type Code = { id: string; public_token: string; activation_code: string; product_name: string; has_360_view: boolean; has_photo_upload: boolean; status: string; created_at: string; qrDataUrl?: string }
+type Code = { id: string; public_token: string; activation_code: string; product_name: string; has_360_view: boolean; has_photo_upload: boolean; status: string; letter_id?: string | null; created_at: string; qrDataUrl?: string }
 const form = ref({ count: 1, product_name: 'Stack Petals gift', has_360_view: false, has_photo_upload: true })
 const codes = ref<Code[]>([])
 const loading = ref(false)
@@ -15,7 +16,8 @@ const error = ref('')
 const fetching = ref(false)
 const search = ref('')
 const statusFilter = ref('all')
-const pendingId = ref('')
+const manageCode = ref<Code | null>(null)
+const success = ref('')
 const copiedId = ref('')
 const exportingId = ref('')
 const previewCode = ref<Code | null>(null)
@@ -81,16 +83,12 @@ async function generate() {
   } catch (caught) { error.value = caught instanceof Error ? caught.message : 'Could not generate Gift QR codes.' }
   finally { loading.value = false }
 }
-async function setStatus(code: Code, status: string) {
-  if (pendingId.value || status === code.status) return
-  if (status === 'revoked' && !window.confirm('Revoke this QR code? Its public link will stop working.')) return
-  pendingId.value = code.id; error.value = ''
-  try {
-    const { error: updateError } = await supabase.from('letter_v2_qr_codes').update({ status, revoked_at: status === 'revoked' ? new Date().toISOString() : null }).eq('id', code.id)
-    if (updateError) throw updateError
-    code.status = status
-  } catch (cause: any) { error.value = cause?.message || 'Could not change QR status.' }
-  finally { pendingId.value = '' }
+async function managementCompleted(message: string) {
+  manageCode.value = null
+  await nextTick()
+  previewCode.value = null
+  success.value = message
+  await load()
 }
 async function printCards() {
   if (exportingId.value) return
@@ -98,11 +96,6 @@ async function printCards() {
   try { await downloadGiftCardBatch(filteredCodes.value, siteUrl()) }
   catch { error.value = 'Could not prepare the print batch. Please try again.' }
   finally { exportingId.value = '' }
-}
-async function changeStatus(code: Code, event: Event) {
-  const select = event.target as HTMLSelectElement
-  await setStatus(code, select.value)
-  select.value = code.status
 }
 onMounted(() => {
   void load()
@@ -121,6 +114,7 @@ onMounted(() => {
       <button class="workspace-primary" type="submit" :disabled="loading || fetching"><PhPlus :size="16" />{{ loading ? 'Generating your cards…' : 'Generate QR batch' }}</button>
     </form>
     <p v-if="error" class="workspace-error" role="alert">{{ error }}</p>
+    <p v-if="success" class="gift-management-success" role="status">{{ success }}</p>
     <div class="workspace-toolbar"><label class="workspace-search"><PhMagnifyingGlass :size="19" aria-hidden="true" /><input v-model="search" type="search" aria-label="Search Gift QR codes" placeholder="Product, activation key, QR token or ID…" /></label><select v-model="statusFilter" aria-label="Filter QR status"><option value="all">All statuses</option><option v-for="status in ['unused','claimed','published','replaced','revoked']" :key="status" :value="status">{{ status }}</option></select><button class="workspace-secondary" :disabled="fetching || loading" @click="load">Refresh</button><button class="workspace-secondary" :disabled="!filteredCodes.length || !!exportingId" @click="printCards"><PhPrinter :size="16" />{{ exportingId === 'batch' ? 'Preparing PNG…' : 'Download compact PNG sheets' }}</button></div>
     <p class="gift-print-note">Transparent PNG · 300 dpi · 90 × 54 mm per side. Compact batches fit up to five front/back pairs per sheet; larger batches download as a ZIP. Print at actual size. Front: QR link. Back: sender activation code.</p>
     <div class="workspace-results"><span>{{ filteredCodes.length }} of {{ codes.length }} recent cards</span><button v-if="search || statusFilter !== 'all'" @click="search = ''; statusFilter = 'all'">Clear filters</button></div>
@@ -133,7 +127,7 @@ onMounted(() => {
         <h3>{{ code.product_name }}</h3>
         <div class="workspace-activation"><small>Activation key</small><div><code>{{ code.activation_code }}</code><button type="button" :aria-label="copiedId === code.id ? 'Activation key copied' : 'Copy activation key'" @click="copyActivation(code)"><PhCopy :size="16" />{{ copiedId === code.id ? 'Copied' : 'Copy' }}</button></div></div>
         <div class="workspace-qr-features"><span>{{ code.has_360_view ? '360° enabled' : 'Letter only' }}</span><span>{{ code.has_photo_upload ? 'Memory photos' : 'No photo uploads' }}</span></div>
-        <div class="workspace-qr-controls gift-card-controls"><label>Status<select :value="code.status" :disabled="!!pendingId" @change="changeStatus(code, $event)"><option v-for="status in ['unused','claimed','published','replaced','revoked']" :key="status" :value="status">{{ status }}</option></select></label><button type="button" class="workspace-secondary gift-preview-button" @click="previewCode = code" aria-label="Preview gift card and download front or back"><PhEye :size="18" aria-hidden="true" />Preview</button></div>
+        <div class="workspace-qr-controls gift-card-controls"><small class="gift-owner-note">Owner-managed card</small><button type="button" class="workspace-secondary gift-preview-button" @click="previewCode = code" aria-label="Preview, download or manage gift card"><PhEye :size="18" aria-hidden="true" />Preview</button></div>
       </article>
     </div>
     <Teleport to="body">
@@ -142,13 +136,19 @@ onMounted(() => {
           <header><div><p>THE PRINT EDITION</p><h2 id="gift-card-preview-title">A little card. A lasting feeling.</h2></div><button aria-label="Close card preview" @click="previewCode = null"><PhX :size="22" /></button></header>
           <div class="gift-card-preview-sides"><figure><figcaption>01 / FRONT · THE INVITATION</figcaption><img :src="previewFront" alt="Gift card front with its unique scannable QR" /></figure><figure><figcaption>02 / BACK · FOR THE SENDER</figcaption><img :src="previewBack" alt="Gift card back with the visible activation code" /></figure></div>
           <footer><p>Transparent PNG · 300 dpi · 90 × 54 mm per side.<br />No page background. Keep the activation code private until setup is complete.</p><div class="gift-download-options"><div><button type="button" :disabled="!!exportingId" @click="downloadCard(previewCode, 'front')"><PhDownloadSimple :size="18" aria-hidden="true" />Front PNG</button><button type="button" :disabled="!!exportingId" @click="downloadCard(previewCode, 'back')"><PhDownloadSimple :size="18" aria-hidden="true" />Back PNG</button></div><span v-if="exportingId" role="status">Preparing your PNG…</span></div></footer>
+          <div class="gift-management-entry"><div><strong>Owner controls</strong><p>Reset activation, remove a letter, disable or delete this card. Password confirmation required.</p></div><button type="button" class="workspace-secondary" :disabled="!!exportingId" @click="manageCode = previewCode">Manage card</button></div>
         </section>
       </div>
     </Teleport>
+    <GiftQrManageDialog v-if="manageCode" :code="manageCode" @close="manageCode = null" @completed="managementCompleted" />
   </section>
 </template>
 <style scoped>
 .gift-print-note { color:#7a7069; font-size:12px; line-height:1.7; margin:12px 4px 22px; }
+.gift-owner-note { color:#7a7069; font-size:11px; }
+.gift-management-success { background:#edf4ee; color:#41624e; border:1px solid #cfdfd2; border-radius:12px; padding:14px 18px; }
+.gift-management-entry { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:24px; padding:18px; background:#f3eae2; border-radius:14px; }
+.gift-management-entry strong { font-size:13px; }.gift-management-entry p { margin:6px 0 0; color:#80685b; font-size:12px; line-height:1.6; }.gift-management-entry button { flex-shrink:0; }
 .letter-workspace .gift-card-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; padding-top:18px; }
 .letter-workspace .gift-card-controls label { display:grid; gap:7px; color:#65756a; font-size:10px; font-weight:600; letter-spacing:.04em; }
 .letter-workspace .gift-card-controls select { width:100%; max-width:none; min-width:0; }
