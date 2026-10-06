@@ -75,6 +75,8 @@ async function submit() {
 <style scoped>
 .qr-manage-overlay{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:20px;background:#282320ba;backdrop-filter:blur(6px)}
 .qr-manage{width:min(580px,100%);max-height:90dvh;overflow:auto;border:1px solid #ead8cc;border-radius:24px;background:#fffaf5;padding:26px;color:#523f36;box-shadow:0 24px 80px #20161444}
+.qr-manage{scrollbar-width:none}
+.qr-manage::-webkit-scrollbar{display:none;width:0;height:0}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px}header p{font-size:10px;letter-spacing:.14em;color:#8a6957}h2{font:normal 28px/1.2 Georgia,serif;margin:8px 0}header button{background:white;border:1px solid #e5d7cc;border-radius:50%;padding:10px;display:flex;color:inherit}
 .qr-manage-product{font-size:14px}.qr-manage-product small{display:block;color:#8b786b;margin-top:4px}fieldset{border:0;padding:0;margin:22px 0 0}legend{font-size:12px;margin-bottom:10px}
 .qr-action{display:flex;align-items:flex-start;gap:12px;padding:14px;margin:8px 0;border:1px solid #e6d7cc;border-radius:14px;background:#fff}.qr-action.selected{border-color:#8baf96;background:#eef4ed}.qr-action.unavailable{opacity:.5}.qr-action input{margin-top:4px;accent-color:#5f8872}.qr-action strong{font-size:14px;font-weight:600}.qr-action small{display:block;font-size:12px;line-height:1.6;margin-top:5px;color:#75665a}

@@ -162,6 +162,8 @@ onMounted(() => {
 .gift-card-controls :is(button,select):focus-visible,.gift-download-options button:focus-visible { outline:2px solid #5f8872; outline-offset:3px; }
 .gift-card-preview-overlay { position:fixed; inset:0; z-index:1100; padding:24px; display:grid; place-items:center; background:#292322b8; backdrop-filter:blur(8px); }
 .gift-card-preview { width:min(1100px,100%); max-height:90dvh; overflow:auto; padding:30px; border:1px solid #e9d7c8; border-radius:24px; background:#fffaf4; color:#563c32; box-shadow:0 24px 90px #160e0c55; }
+.gift-card-preview { scrollbar-width:none; }
+.gift-card-preview::-webkit-scrollbar { display:none; width:0; height:0; }
 .gift-card-preview header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:28px; }
 .gift-card-preview header p { font-size:10px; letter-spacing:.2em; color:#a88067; margin:0 0 9px; }
 .gift-card-preview h2 { margin:0; font:normal 30px/1.2 Georgia,serif; }
