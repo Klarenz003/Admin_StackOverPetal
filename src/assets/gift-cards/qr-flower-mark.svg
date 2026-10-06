@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 40 840 820" fill="none">
+ <title>Stack Petals heart flower</title>
+ <defs>
+  <linearGradient id="center" x1="500" y1="75" x2="500" y2="610" gradientUnits="userSpaceOnUse"><stop stop-color="#ffc2b6"/><stop offset="1" stop-color="#c75f61"/></linearGradient>
+  <linearGradient id="light" x1="240" y1="180" x2="560" y2="680" gradientUnits="userSpaceOnUse"><stop stop-color="#ffd6c7"/><stop offset=".58" stop-color="#f5b4a6"/><stop offset="1" stop-color="#d57673"/></linearGradient>
+  <linearGradient id="dark" x1="150" y1="300" x2="500" y2="690" gradientUnits="userSpaceOnUse"><stop stop-color="#e7978c"/><stop offset="1" stop-color="#ad4f52"/></linearGradient>
+  <linearGradient id="leaf" x1="200" y1="690" x2="510" y2="850" gradientUnits="userSpaceOnUse"><stop stop-color="#9da17e"/><stop offset="1" stop-color="#606c4f"/></linearGradient>
+  <linearGradient id="heart" x1="500" y1="337" x2="500" y2="516" gradientUnits="userSpaceOnUse"><stop stop-color="#fffaf2"/><stop offset="1" stop-color="#f9eade"/></linearGradient>
+ </defs>
+ <path d="M500 72C471 130 395 182 369 264C344 342 406 448 500 519C594 448 656 342 631 264C605 182 529 130 500 72Z" fill="url(#center)"/>
+ <path d="M500 78V516" stroke="#ffe0d2" stroke-width="3" opacity=".8"/>
+ <path id="side" d="M500 598C385 521 207 460 213 330C216 253 260 228 248 177C358 187 454 267 485 413C496 461 491 534 500 598Z" fill="url(#light)"/>
+ <use href="#side" transform="translate(1000 0) scale(-1 1)"/>
+ <path d="M255 185C307 263 257 360 330 437M745 185C693 263 743 360 670 437" stroke="#ffe4d7" stroke-width="3"/>
+ <path d="M500 516C438 488 355 433 338 408C323 385 319 334 343 337C386 351 468 414 500 426C532 414 614 351 657 337C681 334 677 385 662 408C645 433 562 488 500 516Z" fill="url(#heart)"/>
+ <path id="outer-dark" d="M500 709C428 590 339 643 245 616C132 584 174 427 100 367C229 343 386 482 460 574C487 610 499 658 500 709Z" fill="url(#dark)"/>
+ <use href="#outer-dark" transform="translate(1000 0) scale(-1 1)"/>
+ <path id="outer-light" d="M500 709C484 614 423 576 351 536C236 473 236 415 100 367C213 331 334 431 422 501C481 548 505 602 500 709Z" fill="url(#light)"/>
+ <use href="#outer-light" transform="translate(1000 0) scale(-1 1)"/>
+ <path d="M106 366C247 399 239 507 350 546C423 572 481 606 500 705M894 366C753 399 761 507 650 546C577 572 519 606 500 705" stroke="#ffdbce" stroke-width="2.6"/>
+ <path id="green-leaf" d="M494 812C410 686 296 799 209 660C284 696 324 672 379 696C460 731 482 771 494 812Z" fill="url(#leaf)"/>
+ <use href="#green-leaf" transform="translate(1000 0) scale(-1 1)"/>
+ <path d="M232 680C341 731 422 691 492 805M768 680C659 731 578 691 508 805" stroke="#c4c7a6" stroke-width="3" opacity=".75"/>
+</svg>
