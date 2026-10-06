@@ -4,10 +4,12 @@ import { createClient } from '@supabase/supabase-js'
 import { supabase } from '@/supabaseClient'
 import { PhLockKey, PhX } from '@phosphor-icons/vue'
 const props = defineProps<{ code: { id: string; product_name: string; status: string; letter_id?: string | null } }>()
-const emit = defineEmits<{ close: []; completed: [message: string] }>()
+const emit = defineEmits<{ close: []; completed: [message: string, newQrId?: string] }>()
 const action = ref('reset'), password = ref(''), confirmation = ref(''), busy = ref(false), error = ref('')
 const dialog = ref<HTMLElement | null>(null)
 const choices = computed(() => [
+  { value: 'reactivate', title: 'Reactivate QR', body: 'Restore this revoked card without deleting its letter, photos or password. The printed QR and activation code stay the same.', disabled: props.code.status !== 'revoked' },
+  { value: 'renew', title: 'Renew / transfer to a new QR', body: 'Move the existing letter to a new printable card. The old QR stops working. Activate the new card with its new code, then use the same letter password.', disabled: !props.code.letter_id || !['published','revoked'].includes(props.code.status) },
   { value: 'reset', title: 'Reset activation', body: 'Keep the same printed QR and activation code. The sender must activate it again.', disabled: !!props.code.letter_id || !['unused','claimed'].includes(props.code.status) },
   { value: 'remove_letter', title: 'Remove letter & reset', body: 'Permanently erase the letter, its photos, password and remembered access. Keep the printed card for reuse.', disabled: !props.code.letter_id },
   { value: 'revoke', title: 'Disable this QR', body: 'Stop the public link from working without deleting its letter.', disabled: props.code.status === 'revoked' },
@@ -44,9 +46,15 @@ async function submit() {
     password.value = ''
     if (authError || !data.user) throw new Error('Password could not be confirmed. Check it and try again.')
     if (data.user.id !== current.user.id) throw new Error('Confirm using the signed-in owner account.')
-    const { data: done, error: rpcError } = await verifier.rpc('manage_gift_qr', { p_qr_id: props.code.id, p_action: action.value })
-    if (rpcError || done !== true) throw new Error(rpcError?.code === 'PGRST202' ? 'Management is not installed yet. Apply the admin migration first.' : rpcError?.message || 'The action could not be completed.')
-    emit('completed', action.value === 'delete' ? 'Gift QR and its attached letter permanently deleted.' : action.value === 'remove_letter' ? 'Letter permanently deleted. Card is ready for activation again.' : action.value === 'revoke' ? 'Gift QR disabled. Its public link no longer works.' : 'Activation reset. The sender must activate this card again.')
+    const { data: done, error: rpcError } = action.value === 'renew'
+      ? await verifier.rpc('renew_gift_qr', { p_qr_id: props.code.id })
+      : await verifier.rpc('manage_gift_qr', { p_qr_id: props.code.id, p_action: action.value })
+    if (rpcError || (action.value === 'renew' ? typeof done !== 'string' : done !== true)) throw new Error(rpcError?.code === 'PGRST202' ? 'Management is not installed yet. Apply the admin migration first.' : rpcError?.message || 'The action could not be completed.')
+    if (action.value === 'renew') {
+      emit('completed', 'Letter transferred to a new QR. Download its front and back below. Activate the new card before reading; keep using the same letter password. The old QR has been retired.', done)
+      return
+    }
+    emit('completed', action.value === 'reactivate' ? 'Gift QR reactivated. Its letter and password are unchanged; the same printed QR works again.' : action.value === 'delete' ? 'Gift QR and its attached letter permanently deleted.' : action.value === 'remove_letter' ? 'Letter permanently deleted. Card is ready for activation again.' : action.value === 'revoke' ? 'Gift QR disabled. Its public link no longer works.' : 'Activation reset. The sender must activate this card again.')
   } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Could not confirm the action.' }
   finally { password.value = ''; await verifier.auth.signOut({ scope: 'local' }).catch(() => {}); busy.value = false }
 }
@@ -60,7 +68,7 @@ async function submit() {
         <form @submit.prevent="submit">
           <fieldset :disabled="busy"><legend>Choose what happens to this card</legend>
             <label v-for="choice in choices" :key="choice.value" class="qr-action" :class="{ selected: action === choice.value, unavailable: choice.disabled }"><input v-model="action" type="radio" :value="choice.value" :disabled="choice.disabled" @change="confirmation = ''; error = ''" /><span><strong>{{ choice.title }}</strong><small>{{ choice.body }}</small></span></label>
-            <p class="qr-manage-warning">{{ action === 'delete' || action === 'remove_letter' ? 'Permanent deletion cannot be undone. Export or retain any needed records first.' : 'This affects the customer’s access. Reset is not a fix for a mismatched activation code.' }}</p>
+            <p class="qr-manage-warning">{{ action === 'renew' ? 'The old printed card will stop working. Letter content, password and remembered devices stay unchanged. Share the NEW activation code privately; renewing a QR does not replace a compromised letter password.' : action === 'reactivate' ? 'This restores access through the printed QR. A published letter still requires its existing password; a previously remembered browser may unlock it automatically. Unfinished cards return to their previous activation stage.' : action === 'delete' || action === 'remove_letter' ? 'Permanent deletion cannot be undone. Export or retain any needed records first.' : 'This affects the customer’s access. Reset is not a fix for a mismatched activation code.' }}</p>
             <label class="qr-manage-field"><span><PhLockKey :size="16" />Your admin login password</span><input v-model="password" type="password" autocomplete="current-password" required placeholder="Confirm your owner password" /></label>
             <label class="qr-manage-field">Type CONFIRM to continue<input v-model="confirmation" autocomplete="off" spellcheck="false" required placeholder="CONFIRM" /></label>
           </fieldset>

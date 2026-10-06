@@ -83,12 +83,13 @@ async function generate() {
   } catch (caught) { error.value = caught instanceof Error ? caught.message : 'Could not generate Gift QR codes.' }
   finally { loading.value = false }
 }
-async function managementCompleted(message: string) {
+async function managementCompleted(message: string, newQrId?: string) {
   manageCode.value = null
   await nextTick()
   previewCode.value = null
   success.value = message
   await load()
+  if (newQrId) previewCode.value = codes.value.find(code => code.id === newQrId) || null
 }
 async function printCards() {
   if (exportingId.value) return
