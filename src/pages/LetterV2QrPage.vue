@@ -2,7 +2,7 @@
 import '@/assets/letter-workspace.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import QRCode from 'qrcode'
-import { PhQrCode, PhMagnifyingGlass, PhPrinter, PhPlus, PhCopy, PhDownloadSimple, PhEye, PhX } from '@phosphor-icons/vue'
+import { PhQrCode, PhMagnifyingGlass, PhPrinter, PhPlus, PhCopy, PhDownloadSimple, PhEye, PhX, PhLockKey } from '@phosphor-icons/vue'
 import { supabase } from '@/supabaseClient'
 import { giftCardSvg, giftClaimUrl, loadGiftCardTemplates, svgDataUrl, type GiftCardTemplates } from '@/utils/giftCardArtwork'
 import { downloadGiftCardPng, downloadGiftCardBatch } from '@/utils/giftCardPng'
@@ -136,7 +136,7 @@ onMounted(() => {
           <header><div><p>THE PRINT EDITION</p><h2 id="gift-card-preview-title">A little card. A lasting feeling.</h2></div><button aria-label="Close card preview" @click="previewCode = null"><PhX :size="22" /></button></header>
           <div class="gift-card-preview-sides"><figure><figcaption>01 / FRONT · THE INVITATION</figcaption><img :src="previewFront" alt="Gift card front with its unique scannable QR" /></figure><figure><figcaption>02 / BACK · FOR THE SENDER</figcaption><img :src="previewBack" alt="Gift card back with the visible activation code" /></figure></div>
           <footer><p>Transparent PNG · 300 dpi · 90 × 54 mm per side.<br />No page background. Keep the activation code private until setup is complete.</p><div class="gift-download-options"><div><button type="button" :disabled="!!exportingId" @click="downloadCard(previewCode, 'front')"><PhDownloadSimple :size="18" aria-hidden="true" />Front PNG</button><button type="button" :disabled="!!exportingId" @click="downloadCard(previewCode, 'back')"><PhDownloadSimple :size="18" aria-hidden="true" />Back PNG</button></div><span v-if="exportingId" role="status">Preparing your PNG…</span></div></footer>
-          <div class="gift-management-entry"><div><strong>Owner controls</strong><p>Reset activation, remove a letter, disable or delete this card. Password confirmation required.</p></div><button type="button" class="workspace-secondary" :disabled="!!exportingId" @click="manageCode = previewCode">Manage card</button></div>
+          <div class="gift-management-entry"><div class="gift-management-description"><span class="gift-management-icon"><PhLockKey :size="22" weight="light" aria-hidden="true" /></span><div><strong>Owner controls</strong><p>Reset activation, remove a letter, or disable this card.<br />Sensitive actions require your admin password.</p></div></div><button type="button" class="gift-manage-button" :disabled="!!exportingId" @click="manageCode = previewCode"><PhLockKey :size="17" aria-hidden="true" />Manage card</button></div>
         </section>
       </div>
     </Teleport>
@@ -147,8 +147,13 @@ onMounted(() => {
 .gift-print-note { color:#7a7069; font-size:12px; line-height:1.7; margin:12px 4px 22px; }
 .gift-owner-note { color:#7a7069; font-size:11px; }
 .gift-management-success { background:#edf4ee; color:#41624e; border:1px solid #cfdfd2; border-radius:12px; padding:14px 18px; }
-.gift-management-entry { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:24px; padding:18px; background:#f3eae2; border-radius:14px; }
-.gift-management-entry strong { font-size:13px; }.gift-management-entry p { margin:6px 0 0; color:#80685b; font-size:12px; line-height:1.6; }.gift-management-entry button { flex-shrink:0; }
+.gift-management-entry { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:24px; padding:20px; background:#f4eee7; border:1px solid #e6d8cb; border-radius:16px; }
+.gift-management-description { display:flex; align-items:center; gap:14px; min-width:0; }
+.gift-management-icon { display:grid; place-items:center; flex:none; width:44px; height:44px; border-radius:12px; background:#fffaf4; border:1px solid #e4d5c7; color:#806451; }
+.gift-management-entry strong { font-size:14px; font-weight:600; color:#594536; }.gift-management-entry p { margin:6px 0 0; color:#786355; font-size:12px; line-height:1.7; }
+.gift-manage-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; min-height:46px; padding:12px 18px; border:1px solid #c5d7c8; border-radius:12px; background:#e8f0e7; color:#3e6049; font:600 13px/1.4 'Inter',sans-serif; cursor:pointer; transition:background .15s,border-color .15s; }
+.gift-manage-button:hover:not(:disabled) { background:#dce9dc; border-color:#97b49c; }.gift-manage-button:focus-visible { outline:2px solid #5f8872; outline-offset:3px; }.gift-manage-button:disabled { opacity:.5; cursor:wait; }
+@media(max-width:600px) { .gift-management-entry { flex-direction:column; align-items:stretch; gap:16px; padding:16px; }.gift-management-description { align-items:flex-start; }.gift-manage-button { width:100%; box-sizing:border-box; } }
 .letter-workspace .gift-card-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; padding-top:18px; }
 .letter-workspace .gift-card-controls label { display:grid; gap:7px; color:#65756a; font-size:10px; font-weight:600; letter-spacing:.04em; }
 .letter-workspace .gift-card-controls select { width:100%; max-width:none; min-width:0; }
